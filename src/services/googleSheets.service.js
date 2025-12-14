@@ -1,6 +1,7 @@
 import { google } from 'googleapis';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import fs from 'fs';
 import { DataValidator, SHEET_SCHEMAS } from '../models/sheet.schema.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -43,13 +44,32 @@ class GoogleSheetsService {
 
   /**
    * Thực hiện authentication một lần
+   * Hỗ trợ cả: (1) file credentials, (2) ENV variable GOOGLE_CREDENTIALS
    */
   async performAuthentication() {
     try {
-      const auth = new google.auth.GoogleAuth({
-        keyFile: KEYFILEPATH,
-        scopes: ['https://www.googleapis.com/auth/spreadsheets']
-      });
+      let authOptions;
+
+      // Ưu tiên 1: Đọc từ Environment Variable (cho Vercel)
+      if (process.env.GOOGLE_CREDENTIALS) {
+        const credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS);
+        authOptions = {
+          credentials: credentials,
+          scopes: ['https://www.googleapis.com/auth/spreadsheets']
+        };
+      }
+      // Ưu tiên 2: Đọc từ file (cho local development)
+      else if (fs.existsSync(KEYFILEPATH)) {
+        authOptions = {
+          keyFile: KEYFILEPATH,
+          scopes: ['https://www.googleapis.com/auth/spreadsheets']
+        };
+      }
+      else {
+        throw new Error('No credentials found. Set GOOGLE_CREDENTIALS env or provide sheetCredentials.json file');
+      }
+
+      const auth = new google.auth.GoogleAuth(authOptions);
 
       this.authClient = await auth.getClient();
       this.sheetsAPI = google.sheets({ version: 'v4', auth: this.authClient });
