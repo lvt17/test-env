@@ -681,20 +681,33 @@ class GoogleSheetsService {
 
       const actualRowIndex = targetRowIndex + 2;
 
-      // Create cell updates (single operation, no loop over array)
+      // 🔥 FIX: Đọc header từ Sheet thực tế thay vì dùng schema cứng
+      const headerResponse = await sheets.spreadsheets.values.get({
+        spreadsheetId: spreadsheetId,
+        range: `${sheetName}!1:1`,
+        valueRenderOption: 'UNFORMATTED_VALUE'
+      });
+
+      const headers = headerResponse.data.values?.[0] || [];
+
+      // Create cell updates based on actual header position
       const updateRequests = [];
       const changedFields = [];
 
-      schema.columns.forEach((col, colIndex) => {
-        if (updateData.hasOwnProperty(col.key) && col.key !== primaryKeyColumn) {
-          const newValue = updateData[col.key];
+      // Tìm vị trí cột dựa trên header thực tế
+      Object.keys(updateData).forEach(fieldKey => {
+        if (fieldKey === primaryKeyColumn) return; // Skip primary key
+
+        const colIndex = headers.findIndex(h => h === fieldKey);
+        if (colIndex !== -1) {
+          const newValue = updateData[fieldKey];
           const columnLetter = this.getColumnLetter(colIndex + 1);
 
           updateRequests.push({
             range: `${sheetName}!${columnLetter}${actualRowIndex}`,
             values: [[newValue]]
           });
-          changedFields.push(col.key);
+          changedFields.push(fieldKey);
         }
       });
 
