@@ -371,7 +371,7 @@ class SheetsController {
     try {
       const { sheetName } = req.params;
       const updates = req.body;
-      const { verbose, spreadsheetId } = req.query; // Thêm spreadsheetId
+      const { verbose, spreadsheetId = process.env.DEFAULT_SPREADSHEET_ID } = req.query; // Dùng env nếu không có query param
 
       // Validate input
       if (!Array.isArray(updates)) {
@@ -412,7 +412,7 @@ class SheetsController {
     try {
       const { sheetName } = req.params;
       const updateData = req.body;
-      const { verbose, spreadsheetId } = req.query; // Thêm spreadsheetId
+      const { verbose, spreadsheetId = process.env.DEFAULT_SPREADSHEET_ID } = req.query; // Dùng env nếu không có query param
 
       // Validation: Must be object, not array
       if (Array.isArray(updateData) || typeof updateData !== 'object' || updateData === null) {
