@@ -55,5 +55,13 @@ router.post('/flush-queue', syncController.flushQueue);
  */
 router.post('/generate-mock', syncController.generateMockData);
 
+/**
+ * POST /sync/db-to-sheet
+ * Bulk sync all DB data to Google Sheet (background)
+ * Body: { batchSize: 100, startFrom: 0 }
+ * WARNING: Takes ~15 mins for 5000 rows
+ */
+router.post('/db-to-sheet', syncController.syncDbToSheet);
+
 export default router;
 

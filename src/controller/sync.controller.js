@@ -267,8 +267,92 @@ class SyncController {
             });
         }
     }
+
+    /**
+     * POST /sync/db-to-sheet
+     * Bulk sync all DB data to Google Sheet (background job)
+     * WARNING: This can take 10-15 minutes for 5000+ rows
+     */
+    async syncDbToSheet(req, res) {
+        try {
+            const { batchSize = 100, startFrom = 0 } = req.body;
+            const GoogleSheetsService = (await import('../services/googleSheets.service.js')).default;
+            const sheetsService = new GoogleSheetsService();
+
+            console.log(`🔄 Starting DB → Sheet sync (batch: ${batchSize}, start: ${startFrom})...`);
+
+            await databaseService.connect();
+
+            // Get total count
+            const totalCount = await databaseService.getOrdersCount();
+            console.log(`📊 Total rows in DB: ${totalCount}`);
+
+            // Send immediate response
+            res.json({
+                success: true,
+                message: 'Sync started in background',
+                totalRows: totalCount,
+                estimatedTime: `~${Math.ceil(totalCount / batchSize * 2)} minutes`
+            });
+
+            // Continue sync in background
+            this.performBulkSheetSync(sheetsService, totalCount, batchSize, startFrom);
+
+        } catch (error) {
+            res.status(500).json({
+                success: false,
+                message: error.message
+            });
+        }
+    }
+
+    /**
+     * Background sync processor
+     */
+    async performBulkSheetSync(sheetsService, totalCount, batchSize, startFrom) {
+        const syncService = (await import('../services/sync.service.js')).default;
+        let synced = 0;
+        let page = Math.floor(startFrom / batchSize) + 1;
+
+        try {
+            while (synced + startFrom < totalCount) {
+                // Fetch batch from DB
+                const result = await databaseService.getAllOrdersPaginated({
+                    page,
+                    limit: batchSize,
+                    sortBy: 'id',
+                    order: 'asc'
+                });
+
+                if (!result.data || result.data.length === 0) break;
+
+                // Convert to Sheet format
+                const sheetRows = result.data.map(row => syncService.dbRowToSheetRow(row));
+
+                // Write batch to Sheet
+                try {
+                    await sheetsService.addMultipleRows('F3', sheetRows);
+                    synced += sheetRows.length;
+                    console.log(`📤 Synced batch ${page}: ${synced}/${totalCount} rows`);
+                } catch (err) {
+                    console.error(`❌ Batch ${page} failed:`, err.message);
+                }
+
+                page++;
+
+                // Rate limit: wait 1s between batches to avoid API limits
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+
+            console.log(`✅ DB → Sheet sync complete: ${synced} rows`);
+
+        } catch (error) {
+            console.error('❌ Background sync failed:', error.message);
+        }
+    }
 }
 
 export default new SyncController();
+
 
 
