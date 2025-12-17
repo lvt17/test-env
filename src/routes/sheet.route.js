@@ -205,4 +205,18 @@ router.get('/:sheetName/export/csv', SheetsUtilityController.exportToCSV);
  */
 router.post('/duplicate', SheetsUtilityController.duplicateSheet);
 
+// ===== REAL-TIME SYNC ROUTES =====
+/**
+ * GET /api/sheets/:sheetName/poll
+ * Poll for changes since timestamp (fallback for SSE)
+ * Query: since (timestamp)
+ */
+router.get('/:sheetName/poll', SheetsController.pollForChanges);
+
+/**
+ * GET /api/sheets/sync/status
+ * Get sync queue status
+ */
+router.get('/sync/status', SheetsController.getSyncStatus);
+
 export default router;
