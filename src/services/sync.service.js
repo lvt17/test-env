@@ -1,5 +1,7 @@
 import databaseService from './database.service.js';
-import googleSheetsService from './googleSheets.service.js';
+import GoogleSheetsService from './googleSheets.service.js';
+
+const googleSheetsService = new GoogleSheetsService();
 
 /**
  * Sync Service - Handles synchronization between Google Sheets and PostgreSQL
