@@ -1,4 +1,5 @@
 import GoogleSheetsService from '../services/googleSheets.service.js';
+import syncQueueService from '../services/syncQueue.service.js';
 
 const sheetsService = new GoogleSheetsService();
 
@@ -371,7 +372,7 @@ class SheetsController {
     try {
       const { sheetName } = req.params;
       const updates = req.body;
-      const { verbose, spreadsheetId = process.env.DEFAULT_SPREADSHEET_ID } = req.query; // Dùng env nếu không có query param
+      const { verbose } = req.query; // ?verbose=true
 
       // Validate input
       if (!Array.isArray(updates)) {
@@ -389,8 +390,7 @@ class SheetsController {
       }
 
       const options = {
-        verbose: verbose === 'true',
-        spreadsheetId: spreadsheetId // Truyền vào service
+        verbose: verbose === 'true'
       };
 
       const result = await sheetsService.updateByPrimaryKey(sheetName, updates, options);
@@ -412,7 +412,7 @@ class SheetsController {
     try {
       const { sheetName } = req.params;
       const updateData = req.body;
-      const { verbose, spreadsheetId = process.env.DEFAULT_SPREADSHEET_ID } = req.query; // Dùng env nếu không có query param
+      const { verbose } = req.query;
 
       // Validation: Must be object, not array
       if (Array.isArray(updateData) || typeof updateData !== 'object' || updateData === null) {
@@ -423,8 +423,7 @@ class SheetsController {
       }
 
       const options = {
-        verbose: verbose === 'true',
-        spreadsheetId: spreadsheetId // Truyền vào service
+        verbose: verbose === 'true'
       };
 
       const result = await sheetsService.updateSingleByPrimaryKey(sheetName, updateData, options);
@@ -633,6 +632,87 @@ class SheetsController {
       res.json({
         success: true,
         data: { schemas }
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: error.message
+      });
+    }
+  }
+
+  /**
+   * Poll for changes since a specific timestamp
+   * GET /sheet/:sheetName/poll?since=<timestamp>
+   * Returns changes that happened after the given timestamp
+   */
+  async pollForChanges(req, res) {
+    try {
+      const { sheetName } = req.params;
+      const { since = 0 } = req.query;
+      const sinceTimestamp = parseInt(since) || 0;
+
+      // Get last change timestamp
+      const serverVersion = syncQueueService.getLastChangeTimestamp(sheetName);
+
+      // If no changes since client's timestamp, return quickly
+      if (serverVersion <= sinceTimestamp) {
+        return res.json({
+          success: true,
+          hasChanges: false,
+          serverVersion: serverVersion || Date.now()
+        });
+      }
+
+      // Get changes since client's last sync
+      const changes = syncQueueService.getChangesSince(sheetName, sinceTimestamp);
+
+      // If there are changes but they're external (from sheet), 
+      // we need to fetch fresh data from sheet
+      if (changes.length > 0 && changes.some(c => c._external)) {
+        // Fetch fresh data from Google Sheets
+        const result = await sheetsService.getAllData(sheetName);
+
+        return res.json({
+          success: true,
+          hasChanges: true,
+          serverVersion,
+          data: result.data,
+          changeCount: changes.length,
+          source: 'external'
+        });
+      }
+
+      // Return only the changed rows
+      res.json({
+        success: true,
+        hasChanges: changes.length > 0,
+        serverVersion,
+        changes,
+        changeCount: changes.length
+      });
+
+    } catch (error) {
+      console.error('Poll error:', error);
+      res.status(500).json({
+        success: false,
+        message: error.message
+      });
+    }
+  }
+
+  /**
+   * Get sync status and queue stats
+   * GET /sheet/sync/status
+   */
+  async getSyncStatus(req, res) {
+    try {
+      const stats = syncQueueService.getStats();
+
+      res.json({
+        success: true,
+        timestamp: Date.now(),
+        stats
       });
     } catch (error) {
       res.status(500).json({
