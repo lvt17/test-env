@@ -416,19 +416,34 @@ class GoogleSheetsService {
   }
 
   /**
-   * Process rows với column mapping
+   * Process rows với DYNAMIC column mapping based on actual Sheet headers
+   * Maps data by header NAME, not by position index
    */
   processRowsWithColumnMapping(dataRows, headers, columns) {
     const result = [];
+
+    // Build a map: header name -> actual column index in Sheet
+    const headerIndexMap = {};
+    headers.forEach((header, index) => {
+      headerIndexMap[header] = index;
+    });
+
     // Process each row
     dataRows.forEach((row, rowIndex) => {
       const rowObject = { rowIndex: rowIndex + 2 }; // +2 because of header and 0-based index
 
       columns.forEach(col => {
-        // Use column index to get raw value
-        const rawValue = row[col.index];
-        const transformedValue = this.transformValueFast(rawValue, col.type);
-        rowObject[col.key] = transformedValue;
+        // Find actual column index by header name (not schema position)
+        const actualIndex = headerIndexMap[col.key];
+
+        if (actualIndex !== undefined) {
+          const rawValue = row[actualIndex];
+          const transformedValue = this.transformValueFast(rawValue, col.type);
+          rowObject[col.key] = transformedValue;
+        } else {
+          // Column not found in Sheet, use default value
+          rowObject[col.key] = col.type === 'number' ? 0 : '';
+        }
       });
 
       result.push(rowObject);
