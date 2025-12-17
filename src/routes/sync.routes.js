@@ -12,20 +12,27 @@ router.post('/initial', syncController.initialSync);
 
 /**
  * POST /sync/webhook
- * Sync single row from webhook (called by Google Apps Script)
+ * Sync single row from webhook via queue
  */
 router.post('/webhook', syncController.webhookSync);
 
 /**
+ * POST /sync/update
+ * Queue update from web frontend
+ * Body: { maDonHang: "DH001", field1: value1, ... }
+ */
+router.post('/update', syncController.queueUpdate);
+
+/**
  * GET /sync/status
- * Get sync and database status
+ * Get sync, database, and queue status
  */
 router.get('/status', syncController.getStatus);
 
 /**
  * GET /sync/db-data
- * Get data directly from database
- * Query: limit, offset
+ * Get paginated data from database
+ * Query: page, limit, sortBy, order, status
  */
 router.get('/db-data', syncController.getDbData);
 
@@ -35,4 +42,11 @@ router.get('/db-data', syncController.getDbData);
  */
 router.post('/init-schema', syncController.initSchema);
 
+/**
+ * POST /sync/flush-queue
+ * Force process all queued updates immediately
+ */
+router.post('/flush-queue', syncController.flushQueue);
+
 export default router;
+

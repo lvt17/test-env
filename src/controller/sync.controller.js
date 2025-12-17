@@ -1,5 +1,6 @@
 import syncService from '../services/sync.service.js';
 import databaseService from '../services/database.service.js';
+import updateQueueService from '../services/updateQueue.service.js';
 
 /**
  * Sync Controller - Handles Sheet ↔ DB synchronization endpoints
@@ -31,16 +32,57 @@ class SyncController {
 
     /**
      * POST /sync/webhook
-     * Sync single row from webhook (called by Google Apps Script)
+     * Sync single row from webhook via queue
      */
     async webhookSync(req, res) {
         try {
-            const webhookData = req.body;
+            const { primaryKey, changedFields } = req.body;
 
-            // Sync to database
-            const result = await syncService.syncSingleRow(webhookData);
+            if (!primaryKey) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Missing primaryKey'
+                });
+            }
 
-            res.json(result);
+            // Use queue to prevent race conditions
+            const result = updateQueueService.enqueue(primaryKey, changedFields, 'sheet');
+
+            res.json({
+                success: true,
+                ...result,
+                message: result.queued ? 'Update queued' : 'Update rejected due to conflict'
+            });
+        } catch (error) {
+            res.status(500).json({
+                success: false,
+                message: error.message
+            });
+        }
+    }
+
+    /**
+     * POST /sync/update
+     * Queue update from web frontend
+     */
+    async queueUpdate(req, res) {
+        try {
+            const { maDonHang, ...updates } = req.body;
+
+            if (!maDonHang) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Missing maDonHang'
+                });
+            }
+
+            // Use queue to prevent race conditions
+            const result = updateQueueService.enqueue(maDonHang, updates, 'web');
+
+            res.json({
+                success: result.queued,
+                ...result
+            });
         } catch (error) {
             res.status(500).json({
                 success: false,
@@ -51,13 +93,13 @@ class SyncController {
 
     /**
      * GET /sync/status
-     * Get sync and database status
+     * Get sync, database, and queue status
      */
     async getStatus(req, res) {
         try {
-            const status = syncService.getStatus();
+            const syncStatus = syncService.getStatus();
+            const queueStatus = updateQueueService.getStatus();
 
-            // Try to get DB count
             let dbCount = 0;
             try {
                 if (databaseService.isAvailable()) {
@@ -69,7 +111,8 @@ class SyncController {
 
             res.json({
                 success: true,
-                ...status,
+                sync: syncStatus,
+                queue: queueStatus,
                 dbOrdersCount: dbCount,
                 timestamp: new Date().toISOString()
             });
@@ -83,11 +126,12 @@ class SyncController {
 
     /**
      * GET /sync/db-data
-     * Get data directly from database (bypasses Google Sheets)
+     * Get paginated data from database
+     * Query params: page, limit, sortBy, order, status
      */
     async getDbData(req, res) {
         try {
-            const { limit = 100, offset = 0 } = req.query;
+            const { page = 1, limit = 40, sortBy = 'id', order = 'asc', status } = req.query;
 
             await databaseService.connect();
 
@@ -98,19 +142,22 @@ class SyncController {
                 });
             }
 
-            const orders = await databaseService.getAllOrders({
+            const result = await databaseService.getAllOrdersPaginated({
+                page: parseInt(page),
                 limit: parseInt(limit),
-                offset: parseInt(offset)
+                sortBy,
+                order,
+                status: status || null
             });
 
             // Convert to Sheet format for frontend compatibility
-            const data = orders.map(order => syncService.dbRowToSheetRow(order));
+            const data = result.data.map(order => syncService.dbRowToSheetRow(order));
 
             res.json({
                 success: true,
                 data,
                 meta: {
-                    total: data.length,
+                    ...result.meta,
                     source: 'database',
                     timestamp: new Date().toISOString()
                 }
@@ -143,6 +190,28 @@ class SyncController {
             });
         }
     }
+
+    /**
+     * POST /sync/flush-queue
+     * Force process all queued updates immediately
+     */
+    async flushQueue(req, res) {
+        try {
+            await updateQueueService.flush();
+
+            res.json({
+                success: true,
+                message: 'Queue flushed',
+                status: updateQueueService.getStatus()
+            });
+        } catch (error) {
+            res.status(500).json({
+                success: false,
+                message: error.message
+            });
+        }
+    }
 }
 
 export default new SyncController();
+
