@@ -1,6 +1,7 @@
 import syncService from '../services/sync.service.js';
 import databaseService from '../services/database.service.js';
 import updateQueueService from '../services/updateQueue.service.js';
+import { generateMockOrders } from '../services/mockData.service.js';
 
 /**
  * Sync Controller - Handles Sheet ↔ DB synchronization endpoints
@@ -211,7 +212,63 @@ class SyncController {
             });
         }
     }
+
+    /**
+     * POST /sync/generate-mock
+     * Generate mock data for testing
+     * Body: { count: 5000, startIndex: 11 }
+     */
+    async generateMockData(req, res) {
+        try {
+            const { count = 100, startIndex = 11 } = req.body;
+
+            // Limit to prevent abuse
+            const maxCount = 10000;
+            const actualCount = Math.min(count, maxCount);
+
+            console.log(`🎲 Generating ${actualCount} mock orders starting from ${startIndex}...`);
+
+            await databaseService.connect();
+            await databaseService.initializeSchema();
+
+            // Generate mock data
+            const mockOrders = generateMockOrders(actualCount, startIndex);
+
+            // Bulk insert in batches
+            const batchSize = 500;
+            let insertedCount = 0;
+            const startTime = Date.now();
+
+            for (let i = 0; i < mockOrders.length; i += batchSize) {
+                const batch = mockOrders.slice(i, i + batchSize);
+                try {
+                    const result = await databaseService.bulkUpsertOrders(batch);
+                    insertedCount += result.inserted || batch.length;
+                    console.log(`📦 Batch ${Math.floor(i / batchSize) + 1}: ${batch.length} rows`);
+                } catch (err) {
+                    console.error(`Batch failed:`, err.message);
+                }
+            }
+
+            const duration = Date.now() - startTime;
+
+            res.json({
+                success: true,
+                message: `Generated ${insertedCount} mock orders`,
+                count: insertedCount,
+                duration: `${duration}ms`,
+                rowsPerSecond: Math.round(insertedCount / (duration / 1000))
+            });
+
+        } catch (error) {
+            res.status(500).json({
+                success: false,
+                message: error.message
+            });
+        }
+    }
 }
 
 export default new SyncController();
+
 

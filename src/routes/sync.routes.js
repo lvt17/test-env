@@ -48,5 +48,12 @@ router.post('/init-schema', syncController.initSchema);
  */
 router.post('/flush-queue', syncController.flushQueue);
 
+/**
+ * POST /sync/generate-mock
+ * Generate mock data for testing
+ * Body: { count: 5000, startIndex: 11 }
+ */
+router.post('/generate-mock', syncController.generateMockData);
+
 export default router;
 
