@@ -4,6 +4,15 @@ import GoogleSheetsService from './googleSheets.service.js';
 const googleSheetsService = new GoogleSheetsService();
 
 /**
+ * Normalize Vietnamese Unicode to NFC form
+ * Handles differences like Huỷ (ỷ) vs Hủy (ủ)
+ */
+function normalizeUnicode(value) {
+    if (typeof value !== 'string') return value;
+    return value.normalize('NFC');
+}
+
+/**
  * Sync Service - Handles synchronization between Google Sheets and PostgreSQL
  */
 class SyncService {
@@ -102,23 +111,26 @@ class SyncService {
     }
 
     /**
-     * Convert Sheet row data to DB format
+     * Convert Sheet row data to DB format (with Unicode normalization)
      */
     sheetRowToDbRow(sheetRow) {
         const dbRow = {};
 
         for (const [sheetCol, value] of Object.entries(sheetRow)) {
-            const dbCol = this.columnToDbName(sheetCol);
+            // Normalize column name for lookup
+            const normalizedCol = normalizeUnicode(sheetCol);
+            const dbCol = this.columnToDbName(normalizedCol);
+
             if (dbCol && value !== undefined && value !== null && value !== '') {
                 // Handle date conversion
                 if (dbCol.includes('ngay') && value) {
-                    // Try to parse date
                     const dateValue = new Date(value);
                     if (!isNaN(dateValue.getTime())) {
                         dbRow[dbCol] = dateValue.toISOString().split('T')[0];
                     }
                 } else {
-                    dbRow[dbCol] = value;
+                    // Normalize Unicode value
+                    dbRow[dbCol] = normalizeUnicode(value);
                 }
             }
         }
@@ -127,7 +139,7 @@ class SyncService {
     }
 
     /**
-     * Convert DB row to Sheet format (for API responses)
+     * Convert DB row to Sheet format (with Unicode normalization)
      */
     dbRowToSheetRow(dbRow) {
         const sheetRow = { rowIndex: dbRow.id };
@@ -137,7 +149,8 @@ class SyncService {
                 continue;
             }
             const sheetCol = this.dbNameToColumn(dbCol);
-            sheetRow[sheetCol] = value;
+            // Normalize Unicode value for consistent display
+            sheetRow[sheetCol] = normalizeUnicode(value);
         }
 
         return sheetRow;

@@ -2,6 +2,15 @@ import syncQueueService from '../services/syncQueue.service.js';
 import sseController from './sse.controller.js';
 import databaseService from '../services/database.service.js';
 
+/**
+ * Normalize Vietnamese Unicode to NFC form
+ * Handles differences like Huỷ (ỷ) vs Hủy (ủ)
+ */
+function normalizeUnicode(value) {
+    if (typeof value !== 'string') return value;
+    return value.normalize('NFC');
+}
+
 class WebhookController {
     /**
      * Handle sheet change webhook from Google Apps Script
@@ -33,7 +42,7 @@ class WebhookController {
                 });
             }
 
-            // === NEW: Update database with Sheet changes ===
+            // === Update database with Sheet changes (Unicode normalized) ===
             let dbUpdated = false;
             if (primaryKey && changedFields && Object.keys(changedFields).length > 0) {
                 try {
@@ -58,11 +67,13 @@ class WebhookController {
                         'Nhân viên Sale': 'nhan_vien_sale'
                     };
 
-                    const dbUpdate = { ma_don_hang: primaryKey };
+                    const dbUpdate = { ma_don_hang: normalizeUnicode(primaryKey) };
                     for (const [sheetCol, value] of Object.entries(changedFields)) {
-                        const dbCol = sheetToDbMapping[sheetCol];
+                        // Normalize both column name and value
+                        const normalizedCol = normalizeUnicode(sheetCol);
+                        const dbCol = sheetToDbMapping[normalizedCol];
                         if (dbCol) {
-                            dbUpdate[dbCol] = value;
+                            dbUpdate[dbCol] = normalizeUnicode(value);
                         }
                     }
 
