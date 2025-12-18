@@ -20,12 +20,27 @@ app.use(express.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(compression()); // Tự động nén tất cả response
 
-// Serve static files (frontend HTML)
+// Serve static files (frontend HTML) with cache control
 import path from 'path';
 import { fileURLToPath } from 'url';
+import fs from 'fs';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-app.use(express.static(path.join(__dirname, 'public')));
+
+// Serve index.html explicitly with no-cache to ensure latest version
+app.get('/', (req, res) => {
+  const htmlPath = path.join(__dirname, 'public', 'index.html');
+  res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+  res.sendFile(htmlPath);
+});
+
+// Static files for other assets
+app.use(express.static(path.join(__dirname, 'public'), {
+  maxAge: '1h',
+  etag: true
+}));
 
 router(app);
 let port = process.env.PORT || 8081;
