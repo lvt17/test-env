@@ -129,10 +129,28 @@ class SyncController {
      * GET /sync/db-data
      * Get paginated data from database
      * Query params: page, limit, sortBy, order, status
+     * 
+     * PERFORMANCE: Uses server-side + edge caching
      */
+
+    // Server-side cache for fast responses
+    static pageCache = new Map();
+    static CACHE_TTL = 30000; // 30 seconds
+
     async getDbData(req, res) {
         try {
             const { page = 1, limit = 40, sortBy = 'id', order = 'asc', status } = req.query;
+            const cacheKey = `${page}_${limit}_${sortBy}_${order}_${status || 'all'}`;
+            const now = Date.now();
+
+            // Check server-side cache first
+            const cached = SyncController.pageCache.get(cacheKey);
+            if (cached && (now - cached.timestamp) < SyncController.CACHE_TTL) {
+                // Add cache hit header for debugging
+                res.set('X-Cache', 'HIT');
+                res.set('Cache-Control', 'public, s-maxage=30, stale-while-revalidate=60');
+                return res.json(cached.data);
+            }
 
             await databaseService.connect();
 
@@ -154,7 +172,7 @@ class SyncController {
             // Convert to Sheet format for frontend compatibility
             const data = result.data.map(order => syncService.dbRowToSheetRow(order));
 
-            res.json({
+            const responseData = {
                 success: true,
                 data,
                 meta: {
@@ -162,7 +180,19 @@ class SyncController {
                     source: 'database',
                     timestamp: new Date().toISOString()
                 }
+            };
+
+            // Save to server cache
+            SyncController.pageCache.set(cacheKey, {
+                data: responseData,
+                timestamp: now
             });
+
+            // Edge caching headers for Vercel CDN
+            res.set('X-Cache', 'MISS');
+            res.set('Cache-Control', 'public, s-maxage=30, stale-while-revalidate=60');
+
+            res.json(responseData);
         } catch (error) {
             res.status(500).json({
                 success: false,
