@@ -1197,8 +1197,8 @@
           await fetch(`${BASE_URL}/sync/flush-queue`, { method: 'POST' });
         } catch (e) { /* ignore flush errors */ }
 
-        // 5. Tải lại dữ liệu sau khi queue đã được xử lý
-        loadData();
+        // 5. Tải lại dữ liệu sau khi queue đã được xử lý, dùng forceRefresh để tránh cache cũ
+        loadData(currentPage, true, true);
 
       } catch (error) {
         // console.error("Lỗi khi cập nhật từ popover:", error);
@@ -3214,17 +3214,20 @@
     }
 
     // === NEW: Load data from PostgreSQL with CACHE + PREFETCH ===
-    async function loadData(page = 1, showLoader = true) {
+    async function loadData(page = 1, showLoader = true, forceRefresh = false) {
       currentPage = page;
 
       // Check cache first
-      const cached = pageCache.get(page);
-      const now = Date.now();
-      if (cached && (now - cached.timestamp) < CACHE_TTL_MS) {
-        // console.log(`⚡ Cache HIT for page ${page}`);
-        displayPageData(cached.data, cached.meta);
-        prefetchNextPage(page + 1); // Prefetch next
-        return;
+      if (!forceRefresh) {
+        const cached = pageCache.get(page);
+        const now = Date.now();
+        if (cached && (now - cached.timestamp) < CACHE_TTL_MS) {
+          displayPageData(cached.data, cached.meta);
+          prefetchNextPage(page + 1); // Prefetch next
+          return;
+        }
+      } else {
+        pageCache.clear(); // Clear local cache on force refresh
       }
 
       // Show loader only if not cached
@@ -3236,9 +3239,8 @@
         // Fetch staff data once
         await fetchAllStaffData();
 
-        // Fetch from DB
-        const url = `${DB_DATA_URL}?page=${page}&limit=${pageSize}&sortBy=id&order=asc`;
-        // console.log(`📊 Fetching page ${page} from DB...`);
+        // Fetch from DB - add timestamp if forceRefresh to bypass Edge cache
+        const url = `${DB_DATA_URL}?page=${page}&limit=${pageSize}&sortBy=id&order=asc${forceRefresh ? '&_t=' + Date.now() : ''}`;
 
         const response = await fetch(url);
         const json = await response.json();

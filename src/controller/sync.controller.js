@@ -49,6 +49,9 @@ class SyncController {
             // Use queue to prevent race conditions
             const result = updateQueueService.enqueue(primaryKey, changedFields, 'sheet');
 
+            // Invalidate server-side cache on update
+            SyncController.pageCache.clear();
+
             res.json({
                 success: true,
                 ...result,
@@ -79,6 +82,9 @@ class SyncController {
 
             // Use queue to prevent race conditions
             const result = updateQueueService.enqueue(maDonHang, updates, 'web');
+
+            // Invalidate server-side cache on update
+            SyncController.pageCache.clear();
 
             res.json({
                 success: result.queued,
@@ -229,6 +235,9 @@ class SyncController {
     async flushQueue(req, res) {
         try {
             await updateQueueService.flush();
+
+            // Invalidate server-side cache on flush
+            SyncController.pageCache.clear();
 
             res.json({
                 success: true,
