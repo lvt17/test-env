@@ -99,6 +99,62 @@ class SyncController {
     }
 
     /**
+     * POST /sync/update-bulk
+     * Queue multiple updates from web frontend
+     * Body: [{ maDonHang: "DH001", ... }, { maDonHang: "DH002", ... }]
+     */
+    async updateBulk(req, res) {
+        try {
+            const updates = req.body;
+
+            if (!Array.isArray(updates)) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Request body must be an array'
+                });
+            }
+
+            const results = {
+                total: updates.length,
+                queued: 0,
+                conflicts: 0,
+                details: []
+            };
+
+            for (const update of updates) {
+                const pk = update.maDonHang || update['Mã đơn hàng'];
+                const { maDonHang, ['Mã đơn hàng']: ignore, ...fields } = update;
+
+                if (!pk) {
+                    results.details.push({ success: false, message: 'Missing primary key (maDonHang or Mã đơn hàng)' });
+                    continue;
+                }
+
+                const result = updateQueueService.enqueue(pk, fields, 'web');
+                if (result.queued) {
+                    results.queued++;
+                } else {
+                    results.conflicts++;
+                }
+                results.details.push(result);
+            }
+
+            // Invalidate server-side cache on any bulk update
+            SyncController.pageCache.clear();
+
+            res.json({
+                success: true,
+                summary: results
+            });
+        } catch (error) {
+            res.status(500).json({
+                success: false,
+                message: error.message
+            });
+        }
+    }
+
+    /**
      * GET /sync/status
      * Get sync, database, and queue status
      */

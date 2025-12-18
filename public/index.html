@@ -972,7 +972,7 @@
 
     // === Legacy Sheet API (still used for bulk updates) ===
     const UPDATE_SINGLE_URL = `${mainHost}/sheet/${SHEET_NAME}/update-single`;
-    const UPDATE_BULK_URL = `${mainHost}/sheet/${SHEET_NAME}/update`;
+    const UPDATE_BULK_URL = `${mainHost}/sync/update-bulk`;
     const SSE_URL = `${mainHost}/sse/subscribe/${SHEET_NAME}`;
     const POLL_URL = `${mainHost}/sheet/${SHEET_NAME}/poll`;
     const LOCAL_STORAGE_KEY = 'lumiglobal_pending_changes';
@@ -1163,7 +1163,7 @@
 
       try {
         const response = await fetch(UPDATE_BULK_URL, {
-          method: "PATCH",
+          method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload)
         });
@@ -1194,7 +1194,7 @@
 
         // 4. Flush queue để đảm bảo DB được cập nhật trước khi reload data
         try {
-          await fetch(`${BASE_URL}/sync/flush-queue`, { method: 'POST' });
+          await fetch(`${mainHost}/sync/flush-queue`, { method: 'POST' });
         } catch (e) { /* ignore flush errors */ }
 
         // 5. Tải lại dữ liệu sau khi queue đã được xử lý, dùng forceRefresh để tránh cache cũ
@@ -1884,15 +1884,14 @@
       // })));
     }
     async function processCellUpdate(primaryKey, updates) {
-      // Try sending spreadsheetId in body as well
+      // Use DB_UPDATE_URL (vía queue) for consistency
       const payload = {
-        "Mã đơn hàng": primaryKey,
-        spreadsheetId: '1yUKSfBxvSF-ZOLMub0FAQRORjOQQ2ybK4hZ0h5f3xY4',
+        maDonHang: primaryKey,
         ...updates
       };
       try {
-        const response = await fetch(UPDATE_SINGLE_URL, {
-          method: "PATCH",
+        const response = await fetch(DB_UPDATE_URL, {
+          method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload)
         });
@@ -1901,8 +1900,17 @@
         if (!response.ok || !result.success) {
           throw new Error(result.message || 'Lỗi không xác định từ server');
         }
+
+        // flush queue and reload data to ensure consistency
+        try {
+          await fetch(`${mainHost}/sync/flush-queue`, { method: 'POST' });
+        } catch (e) { /* ignore flush errors */ }
+
         showTempMessage(`Đã cập nhật đơn ${primaryKey}`);
         removePendingChange(primaryKey); // Xóa khỏi local storage nếu thành công
+
+        // Reload data quietly to update potential edge cases
+        loadData(currentPage, false, true);
       } catch (error) {
         // console.error("Lỗi khi cập nhật tức thì:", error);
         showTempMessage(`Lỗi cập nhật đơn ${primaryKey}: ${error.message}. Đã lưu tạm.`, true);
@@ -2247,19 +2255,25 @@
           }));
 
           const response = await fetch(UPDATE_BULK_URL, {
-            method: "PATCH",
+            method: "POST",
             headers: {
               "Content-Type": "application/json"
             },
-            body: JSON.stringify(payload)
+            body: JSON.stringify(batchUpdates)
           });
           const result = await response.json();
 
           if (!response.ok || !result.success) {
-            throw new Error(result.message || 'Lỗi không xác định từ server');
+            throw new Error(result.message || 'Lôi không xác định từ server');
           }
 
-          showTempMessage(`Đã dán và cập nhật ${batchUpdates.length} giá trị thành công`);
+          // flush queue and reload
+          try {
+            await fetch(`${mainHost}/sync/flush-queue`, { method: 'POST' });
+          } catch (e) { }
+
+          showTempMessage(`Đã dán và cập nhật thành công ${pasteCount} ô.`);
+          loadData(currentPage, true, true);
 
           // 🔄 Đồng bộ hóa với allData sau khi API thành công
           batchUpdates.forEach(update => {
@@ -2439,7 +2453,7 @@
       // // console.log('📡 Sending bulk clear update to API');
       try {
         const response = await fetch(UPDATE_BULK_URL, {
-          method: "PATCH",
+          method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(batchUpdates)
         });
@@ -2450,8 +2464,13 @@
           throw new Error(result.message || 'Lỗi không xác định từ server');
         }
 
-        // // console.log('✅ Bulk clear update successful');
-        showTempMessage(`Đã xóa và cập nhật ${clearCount} ô thành công`);
+        // flush queue and reload
+        try {
+          await fetch(`${mainHost}/sync/flush-queue`, { method: 'POST' });
+        } catch (e) { }
+
+        showTempMessage(`Đã xóa thành công ${clearCount} ô.`);
+        loadData(currentPage, true, true);
 
         // Xóa khỏi pending changes nếu thành công
         batchUpdates.forEach(update => {
@@ -3193,7 +3212,7 @@
 
       try {
         const response = await fetch(UPDATE_BULK_URL, {
-          method: "PATCH",
+          method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload)
         });
@@ -3202,8 +3221,16 @@
         if (!response.ok || !result.success) {
           throw new Error(result.message || 'Lỗi không xác định từ server');
         }
-        showTempMessage(`Cập nhật hàng loạt thành công ${result.summary.updated} đơn hàng.`);
+
+        showTempMessage(`Cập nhật hàng loạt thành công ${result.summary.queued} đơn hàng. Đang đồng bộ...`);
         clearPendingChanges();
+
+        // Flush queue để đảm bảo DB được cập nhật trước khi reload data
+        try {
+          await fetch(`${mainHost}/sync/flush-queue`, { method: 'POST' });
+        } catch (e) { /* ignore flush errors */ }
+
+        loadData(currentPage, true, true);
       } catch (error) {
         // console.error("Lỗi khi cập nhật hàng loạt:", error);
         showTempMessage(`Lỗi cập nhật. Vui lòng liên hệ lập trình viên.`, true);

@@ -24,6 +24,13 @@ router.post('/webhook', syncController.webhookSync);
 router.post('/update', syncController.queueUpdate);
 
 /**
+ * POST /sync/update-bulk
+ * Queue multiple updates from web frontend
+ * Body: [{ maDonHang: "DH001", field1: value1, ... }, ...]
+ */
+router.post('/update-bulk', syncController.updateBulk);
+
+/**
  * GET /sync/status
  * Get sync, database, and queue status
  */
