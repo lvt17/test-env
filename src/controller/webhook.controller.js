@@ -1,10 +1,12 @@
 import syncQueueService from '../services/syncQueue.service.js';
 import sseController from './sse.controller.js';
+import databaseService from '../services/database.service.js';
 
 class WebhookController {
     /**
      * Handle sheet change webhook from Google Apps Script
      * POST /webhook/sheet-change
+     * Updates DB so frontend can see changes via polling
      */
     async handleSheetChange(req, res) {
         try {
@@ -21,17 +23,58 @@ class WebhookController {
                 changedFields
             } = req.body;
 
-            console.log(`📥 Webhook received: ${sheetName} - Row ${row} by ${user}`);
+            console.log(`📥 Webhook received: ${sheetName} - Row ${row} - Key: ${primaryKey}`);
 
             // Validate required fields
-            if (!sheetName) {
+            if (!sheetName || !primaryKey) {
                 return res.status(400).json({
                     success: false,
-                    error: 'sheetName is required'
+                    error: 'sheetName and primaryKey are required'
                 });
             }
 
-            // Record the external change
+            // === NEW: Update database with Sheet changes ===
+            let dbUpdated = false;
+            if (primaryKey && changedFields && Object.keys(changedFields).length > 0) {
+                try {
+                    await databaseService.connect();
+
+                    // Convert Sheet column names to DB column names
+                    const sheetToDbMapping = {
+                        'Mã đơn hàng': 'ma_don_hang',
+                        'Mã Tracking': 'ma_tracking',
+                        'Ngày lên đơn': 'ngay_len_don',
+                        'Name*': 'name',
+                        'Phone*': 'phone',
+                        'Add': 'address',
+                        'City': 'city',
+                        'State': 'state',
+                        'khu vực': 'khu_vuc',
+                        'Trạng thái giao hàng NB': 'trang_thai_giao_hang_nb',
+                        'Kết quả Check': 'ket_qua_check',
+                        'Lý do': 'ly_do',
+                        'Trạng thái thu tiền': 'trang_thai_thu_tien',
+                        'Ghi chú của VĐ': 'ghi_chu',
+                        'Nhân viên Sale': 'nhan_vien_sale'
+                    };
+
+                    const dbUpdate = { ma_don_hang: primaryKey };
+                    for (const [sheetCol, value] of Object.entries(changedFields)) {
+                        const dbCol = sheetToDbMapping[sheetCol];
+                        if (dbCol) {
+                            dbUpdate[dbCol] = value;
+                        }
+                    }
+
+                    await databaseService.upsertOrder(dbUpdate);
+                    dbUpdated = true;
+                    console.log(`✅ DB updated for ${primaryKey}:`, Object.keys(changedFields));
+                } catch (dbErr) {
+                    console.error(`❌ DB update failed:`, dbErr.message);
+                }
+            }
+
+            // Record the external change for polling
             const changeData = {
                 sheetName,
                 range,
@@ -47,7 +90,7 @@ class WebhookController {
 
             const version = syncQueueService.recordExternalChange(sheetName, changeData);
 
-            // 🚀 Broadcast change to all SSE clients instantly
+            // Broadcast change to all SSE clients
             const clientsNotified = sseController.broadcast(sheetName, {
                 type: 'sheet_change',
                 ...changeData,
@@ -56,7 +99,8 @@ class WebhookController {
 
             res.json({
                 success: true,
-                message: 'Change recorded and broadcast',
+                message: 'Change recorded',
+                dbUpdated,
                 version,
                 clientsNotified
             });
