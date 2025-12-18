@@ -127,23 +127,38 @@ class DatabaseService {
 
     /**
      * Insert or update order (upsert)
+     * Includes protection against stale updates from Sheet
      */
     async upsertOrder(orderData) {
         const columns = Object.keys(orderData);
         const values = Object.values(orderData);
         const placeholders = columns.map((_, i) => `$${i + 1}`).join(', ');
 
+        const isFromSheet = orderData._source === 'sheet' || columns.includes('trang_thai_giao_hang_nb'); // Webhooks often send this
+
         // Build UPDATE clause for conflict
         const updateClause = columns
-            .filter(col => col !== 'ma_don_hang')
+            .filter(col => col !== 'ma_don_hang' && !col.startsWith('_'))
             .map(col => `${col} = EXCLUDED.${col}`)
             .join(', ');
+
+        // Logic: Only update if the incoming data is newer (if source is sheet)
+        // For web updates, we usually trust them as "now"
+        const conflictCondition = isFromSheet
+            ? 'WHERE orders.updated_at <= EXCLUDED.updated_at OR EXCLUDED.updated_at IS NULL'
+            : '';
 
         const query = `
       INSERT INTO orders (${columns.join(', ')})
       VALUES (${placeholders})
       ON CONFLICT (ma_don_hang) 
-      DO UPDATE SET ${updateClause}, updated_at = NOW()
+      DO UPDATE SET 
+        ${updateClause}, 
+        updated_at = CASE 
+          WHEN EXCLUDED.updated_at IS NOT NULL THEN EXCLUDED.updated_at
+          ELSE NOW()
+        END
+      ${conflictCondition}
       RETURNING *
     `;
 

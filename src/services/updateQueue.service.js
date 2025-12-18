@@ -12,6 +12,8 @@ class UpdateQueueService {
     constructor() {
         // Pending updates: Map<ma_don_hang, { updates, source, timestamp }>
         this.queue = new Map();
+        // Loop protection: Map<ma_don_hang, lockExpiryTimestamp>
+        this.syncLocks = new Map();
         this.isProcessing = false;
         this.processInterval = null;
         this.BATCH_INTERVAL_MS = 1000; // Process every 1 second
@@ -49,6 +51,20 @@ class UpdateQueueService {
      */
     enqueue(maDonHang, updates, source = 'web') {
         const timestamp = Date.now();
+
+        // 🛡️ 1. Loop Protection: Ignore echoes from Sheet if we just synced TO it
+        if (source === 'sheet') {
+            const lockExpiry = this.syncLocks.get(maDonHang);
+            if (lockExpiry && lockExpiry > timestamp) {
+                console.log(`🛡️ Loop Protection: Ignored echo from Sheet for ${maDonHang}`);
+                return {
+                    queued: false,
+                    conflict: false,
+                    message: 'Ignored echo from Sheet'
+                };
+            }
+        }
+
         const existing = this.queue.get(maDonHang);
 
         // Check for conflict (same row updated within batch window)
@@ -114,6 +130,10 @@ class UpdateQueueService {
                     try {
                         await this.syncToSheet('F3', orderData);
                         sheetUpdated++;
+
+                        // 🔒 Set Loop Protection Lock
+                        // Ignore any incoming webhooks for this ID for 10 seconds
+                        this.syncLocks.set(orderData.ma_don_hang, Date.now() + 10000);
                     } catch (err) {
                         console.error(`❌ Sheet sync failed for ${orderData.ma_don_hang}:`, err.message);
                     }
