@@ -1232,11 +1232,11 @@
      */
     function startSSE() {
       if (eventSource && eventSource.readyState !== EventSource.CLOSED) {
-        console.log('⚠️ SSE already connected');
+        // console.log('⚠️ SSE already connected');
         return;
       }
 
-      console.log('🔄 Starting SSE real-time sync...');
+      // console.log('🔄 Starting SSE real-time sync...');
       updateSyncIndicator('connecting');
 
       try {
@@ -1244,7 +1244,7 @@
 
         // Connection opened
         eventSource.addEventListener('connected', (event) => {
-          console.log('✅ SSE connected:', JSON.parse(event.data));
+          // console.log('✅ SSE connected:', JSON.parse(event.data));
           sseReconnectAttempts = 0; // Reset on successful connection
           updateSyncIndicator('connected');
         });
@@ -1252,13 +1252,13 @@
         // Receive change event
         eventSource.addEventListener('change', (event) => {
           const data = JSON.parse(event.data);
-          console.log('📥 SSE change received:', data);
+          // console.log('📥 SSE change received:', data);
           handleSSEChange(data);
         });
 
         // Generic message handler
         eventSource.onmessage = (event) => {
-          console.log('📨 SSE message:', event.data);
+          // console.log('📨 SSE message:', event.data);
         };
 
         // Error handler with auto-reconnect
@@ -1286,7 +1286,7 @@
       if (eventSource) {
         eventSource.close();
         eventSource = null;
-        console.log('⏹️ SSE stopped');
+        // console.log('⏹️ SSE stopped');
         updateSyncIndicator('disconnected');
       }
     }
@@ -1299,7 +1299,7 @@
 
       // After 3 failed attempts, switch to polling fallback
       if (sseReconnectAttempts >= SSE_MAX_RECONNECT_ATTEMPTS) {
-        console.log('⚠️ SSE failed too many times, switching to polling fallback');
+        // console.log('⚠️ SSE failed too many times, switching to polling fallback');
         usePollingFallback = true;
         startPollingFallback();
         return;
@@ -1307,7 +1307,7 @@
 
       const delay = Math.min(1000 * Math.pow(2, sseReconnectAttempts), SSE_MAX_RECONNECT_DELAY);
 
-      console.log(`🔄 SSE reconnecting in ${delay / 1000}s (attempt ${sseReconnectAttempts})`);
+      // console.log(`🔄 SSE reconnecting in ${delay / 1000}s (attempt ${sseReconnectAttempts})`);
       updateSyncIndicator('reconnecting');
 
       setTimeout(() => {
@@ -1327,7 +1327,7 @@
         pollIntervalId = null;
       }
 
-      console.log('🔄 Starting continuous polling (5s interval)...');
+      // console.log('🔄 Starting continuous polling (5s interval)...');
       lastSyncTimestamp = Date.now();
       updateSyncIndicator('polling');
 
@@ -1346,7 +1346,7 @@
     async function pollForChanges() {
       // Skip if already syncing
       if (isSyncing) {
-        console.log('⏳ Skipping poll, already syncing...');
+        // console.log('⏳ Skipping poll, already syncing...');
         return;
       }
 
@@ -1369,7 +1369,7 @@
         // Check if data changed (simple length check)
         const currentCount = allData?.length || 0;
         if (data.length !== currentCount || totalRecords !== currentCount) {
-          console.log(`📥 Data updated: ${data.length} rows on page ${currentPage}`);
+          // console.log(`📥 Data updated: ${data.length} rows on page ${currentPage}`);
           handleData({ rows: data });
           updatePaginationUI();
         }
@@ -1399,7 +1399,7 @@
      */
     function handleSSEChange(data) {
       if (isSyncing) {
-        console.log('⏳ Already processing, queuing change');
+        // console.log('⏳ Already processing, queuing change');
         return;
       }
 
@@ -1457,7 +1457,7 @@
      * Handle data update from external source (Google Sheet direct edit)
      */
     function handleExternalDataUpdate(newData) {
-      console.log('🔄 External data update received, refreshing view...');
+      // console.log('🔄 External data update received, refreshing view...');
 
       // Check if user has pending changes that might conflict
       const pendingChanges = getPendingChanges();
@@ -1649,7 +1649,7 @@
       }
       changes[primaryKey][field] = value;
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(changes));
-      // console.log('Change saved to local storage:', { primaryKey, field, value });
+      // // console.log('Change saved to local storage:', { primaryKey, field, value });
       updateStatusButtonUI();
     }
 
@@ -1662,7 +1662,7 @@
 
     function clearPendingChanges() {
       localStorage.removeItem(LOCAL_STORAGE_KEY);
-      // console.log('Local storage cleared.');
+      // // console.log('Local storage cleared.');
       updateStatusButtonUI();
     }
 
@@ -1863,11 +1863,11 @@
       }
 
       // 🔍 LOG: Khi chọn cells (có thể bật/tắt khi cần debug)
-      console.log('🔵 Cell selection updated');
-      console.log('Selected cells count:', selectedCells.size);
-      console.log('Selected cells:', Array.from(selectedCells));
-      // console.log('Tổng số ô được chọn:', selectedCells.size);
-      // console.log('Chi tiết selection:', Array.from(selectedCells).map(cell => ({
+      // console.log('🔵 Cell selection updated');
+      // console.log('Selected cells count:', selectedCells.size);
+      // console.log('Selected cells:', Array.from(selectedCells));
+      // // console.log('Tổng số ô được chọn:', selectedCells.size);
+      // // console.log('Chi tiết selection:', Array.from(selectedCells).map(cell => ({
       //   orderCode: getOrderCodeFromCell(cell),
       //   text: cell.textContent.trim(),
       //   rowDisplay: cell.parentNode.style.display,
@@ -1946,7 +1946,7 @@
 
                   if (colName === 'Đơn vị vận chuyển') {
                     const timestamp = getDateTimeVN();
-                    // console.log(`🛠️ Cập nhật "Ngày Kế toán đối soát với FFM lần 2" cho đơn ${primaryKey} thành ${timestamp}`);
+                    // // console.log(`🛠️ Cập nhật "Ngày Kế toán đối soát với FFM lần 2" cho đơn ${primaryKey} thành ${timestamp}`);
 
                     allData[allDataIndex]["Ngày Kế toán đối soát với FFM lần 2"] = timestamp;
 
@@ -2033,23 +2033,23 @@
     async function pasteToSelectedCells(text) {
       if (selectedCells.size === 0) return;
 
-      // console.log(`🚀 === BẮT ĐẦU PASTE ===`);
-      // console.log(`📋 Dữ liệu paste:`, text);
+      // // console.log(`🚀 === BẮT ĐẦU PASTE ===`);
+      // // console.log(`📋 Dữ liệu paste:`, text);
 
       // // 🔍 LOG: Chi tiết tất cả ô đã được SELECTED
-      // console.log(`📍 SELECTED CELLS (${selectedCells.size} ô):`);
+      // // console.log(`📍 SELECTED CELLS (${selectedCells.size} ô):`);
       // Array.from(selectedCells).forEach((cell, index) => {
       //   const orderCode = getOrderCodeFromCell(cell);
       //   const colName = displayColumns[cell.cellIndex];
       //   const currentValue = getDOMCellValue(cell);
       //   const isVisible = cell.parentNode.style.display !== 'none';
-      //   console.log(`  [${index}] ${orderCode} | Cột: ${colName} | Giá trị: "${currentValue}" | Hiển thị: ${isVisible}`);
+      //   // console.log(`  [${index}] ${orderCode} | Cột: ${colName} | Giá trị: "${currentValue}" | Hiển thị: ${isVisible}`);
       // });
 
       // 🔍 LOG: Tất cả ô được chọn (kể cả bị ẩn)
-      // console.log('=== PASTE DEBUG ===');
-      // console.log('Tổng số ô đã chọn:', selectedCells.size);
-      // console.log('Chi tiết các ô đã chọn:', Array.from(selectedCells).map(cell => ({
+      // // console.log('=== PASTE DEBUG ===');
+      // // console.log('Tổng số ô đã chọn:', selectedCells.size);
+      // // console.log('Chi tiết các ô đã chọn:', Array.from(selectedCells).map(cell => ({
       //   orderCode: getOrderCodeFromCell(cell),
       //   text: cell.textContent.trim(),
       //   rowDisplay: cell.parentNode.style.display,
@@ -2067,8 +2067,8 @@
       );
 
       // 🔍 LOG: Ô sau khi lọc
-      // console.log('Số ô hiển thị sau lọc:', visibleSelectedCells.length);
-      // console.log('Chi tiết các ô hiển thị:', visibleSelectedCells.map(cell => ({
+      // // console.log('Số ô hiển thị sau lọc:', visibleSelectedCells.length);
+      // // console.log('Chi tiết các ô hiển thị:', visibleSelectedCells.map(cell => ({
       //   orderCode: getOrderCodeFromCell(cell),
       //   text: cell.textContent.trim(),
       //   rowIndex: cell.parentNode.rowIndex,
@@ -2108,7 +2108,7 @@
             const primaryKey = getOrderCodeFromCell(cell);
 
             if (primaryKey && primaryKey !== 'N/A' && getDOMCellValue(cell) !== value) {
-              // console.log(`✅ PASTE THỰC TẾ: ${primaryKey} | Cột: ${colName} | "${getDOMCellValue(cell)}" → "${value}" | DOM rowIndex: ${rowIndex}`);
+              // // console.log(`✅ PASTE THỰC TẾ: ${primaryKey} | Cột: ${colName} | "${getDOMCellValue(cell)}" → "${value}" | DOM rowIndex: ${rowIndex}`);
 
               // 1. Cập nhật giao diện
               cell.textContent = value;
@@ -2117,10 +2117,10 @@
               // === START: CODE ĐÃ SỬA LỖI (Trường hợp 1) ===
               // 2. Cập nhật mảng dữ liệu JavaScript (nếu có rowIndex hợp lệ)
               const dataArray = config.data();
-              // console.log('dataArray:', dataArray);
+              // // console.log('dataArray:', dataArray);
 
               if (dataArray && !isNaN(rowIndex) && dataArray[rowIndex] && primaryKey === dataArray[rowIndex]["Mã đơn hàng"]) {
-                // console.log(`🔄 Cập nhật dataArray[${rowIndex}]: "${dataArray[rowIndex]["Mã đơn hàng"]}" - trước: "${dataArray[rowIndex][colName]}" → sau: "${value}"`);
+                // // console.log(`🔄 Cập nhật dataArray[${rowIndex}]: "${dataArray[rowIndex]["Mã đơn hàng"]}" - trước: "${dataArray[rowIndex][colName]}" → sau: "${value}"`);
                 dataArray[rowIndex][colName] = value;
                 if (colName === 'Đơn vị vận chuyển') {
                   const timestamp = getDateTimeVN();
@@ -2143,7 +2143,7 @@
                   if (colName === 'Đơn vị vận chuyển') {
                     const timestamp = getDateTimeVN();
                     allData[allDataIndex]["Ngày Kế toán đối soát với FFM lần 2"] = timestamp;
-                    // console.log(`🔄 Updated allData for paste: ${primaryKey} - ${colName} = "${value}", timestamp = ${timestamp}`);
+                    // // console.log(`🔄 Updated allData for paste: ${primaryKey} - ${colName} = "${value}", timestamp = ${timestamp}`);
                   }
                 }
               }
@@ -2183,7 +2183,7 @@
                 const primaryKey = getOrderCodeFromCell(targetCell);
 
                 if (primaryKey && primaryKey !== 'N/A' && getDOMCellValue(targetCell) !== value) {
-                  // console.log(`✅ PASTE GRID: ${primaryKey} | Cột: ${colName} | "${getDOMCellValue(targetCell)}" → "${value}" | DOM rowIndex: ${rowIndex} | Grid[${r}][${c}]`);
+                  // // console.log(`✅ PASTE GRID: ${primaryKey} | Cột: ${colName} | "${getDOMCellValue(targetCell)}" → "${value}" | DOM rowIndex: ${rowIndex} | Grid[${r}][${c}]`);
 
                   // 1. Cập nhật giao diện
                   targetCell.textContent = value;
@@ -2228,10 +2228,10 @@
 
       if (batchUpdates.length > 0) {
         // 🔍 LOG: Payload sẽ gửi đi
-        // console.log('=== PAYLOAD WILL BE SENT ===');
-        // console.log('Số bản ghi sẽ gửi:', batchUpdates.length);
-        // console.log('Chi tiết payload:', batchUpdates);
-        // console.log('==========================================');
+        // // console.log('=== PAYLOAD WILL BE SENT ===');
+        // // console.log('Số bản ghi sẽ gửi:', batchUpdates.length);
+        // // console.log('Chi tiết payload:', batchUpdates);
+        // // console.log('==========================================');
 
         try {
           // Add spreadsheetId to EACH update item in the batch
@@ -2258,13 +2258,13 @@
           // 🔄 Đồng bộ hóa với allData sau khi API thành công
           batchUpdates.forEach(update => {
             const orderCode = update["Mã đơn hàng"];
-            // console.log(`💾 Đồng bộ với allData: tìm order code "${orderCode}"`);
+            // // console.log(`💾 Đồng bộ với allData: tìm order code "${orderCode}"`);
             if (allData && allData.length > 0) {
               const allDataIndex = allData.findIndex(item => item["Mã đơn hàng"] === orderCode);
               if (allDataIndex !== -1) {
                 Object.entries(update).forEach(([colName, value]) => {
                   if (colName !== "Mã đơn hàng") {
-                    // console.log(`✅ allData[${allDataIndex}] cập nhật ${colName}: "${allData[allDataIndex][colName]}" → "${value}"`);
+                    // // console.log(`✅ allData[${allDataIndex}] cập nhật ${colName}: "${allData[allDataIndex][colName]}" → "${value}"`);
                     allData[allDataIndex][colName] = value;
 
                     // 🔥 FIX: Cập nhật timestamp vào DOM khi paste "Đơn vị vận chuyển"
@@ -2285,7 +2285,7 @@
                             if (timestampFromUpdate) {
                               targetRow.cells[dateColIndex].textContent = timestampFromUpdate;
                               targetRow.cells[dateColIndex].classList.add('highlight');
-                              // console.log(`🕐 Updated timestamp in DOM for order ${orderCode}: ${timestampFromUpdate}`);
+                              // // console.log(`🕐 Updated timestamp in DOM for order ${orderCode}: ${timestampFromUpdate}`);
                             }
                           }
                         }
@@ -2294,7 +2294,7 @@
                   }
                 });
               } else {
-                console.log(`❌ Không tìm thấy order code "${orderCode}" trong allData`);
+                // console.log(`❌ Không tìm thấy order code "${orderCode}" trong allData`);
               }
             }
             removePendingChange(orderCode);
@@ -2319,10 +2319,10 @@
       updateSelectionSummary();
     }
     function clearSelectedCells() {
-      // console.log('🔥 clearSelectedCells() called');
-      // console.log('Selected cells count:', selectedCells.size);
+      // // console.log('🔥 clearSelectedCells() called');
+      // // console.log('Selected cells count:', selectedCells.size);
       if (selectedCells.size === 0) {
-        console.log('❌ No cells selected');
+        // console.log('❌ No cells selected');
         return;
       }
 
@@ -2330,8 +2330,8 @@
       let clearCount = 0;
 
       selectedCells.forEach((cell, index) => {
-        // console.log(`Processing cell ${index + 1}:`, cell);
-        // console.log(`Cell editable:`, cell.classList.contains('editable'));
+        // // console.log(`Processing cell ${index + 1}:`, cell);
+        // // console.log(`Cell editable:`, cell.classList.contains('editable'));
 
         if (cell && cell.classList.contains("editable")) {
           const currentValue = getDOMCellValue(cell);
@@ -2339,7 +2339,7 @@
             const primaryKey = getOrderCodeFromCell(cell);
             const colName = displayColumns[cell.cellIndex];
 
-            // console.log(`🔑 Primary key: ${primaryKey}, Column: ${colName}, Current value: "${currentValue}"`);
+            // // console.log(`🔑 Primary key: ${primaryKey}, Column: ${colName}, Current value: "${currentValue}"`);
 
             if (primaryKey && primaryKey !== 'N/A' && primaryKey !== 'ERROR') {
               // 1. Cập nhật giao diện ngay lập tức
@@ -2374,7 +2374,7 @@
               if (allData && allData.length > 0) {
                 const allDataIndex = allData.findIndex(item => item["Mã đơn hàng"] === primaryKey);
                 if (allDataIndex !== -1) {
-                  // console.log(`🔄 Updating allData[${allDataIndex}] for order ${primaryKey}: ${colName} = ""`);
+                  // // console.log(`🔄 Updating allData[${allDataIndex}] for order ${primaryKey}: ${colName} = ""`);
                   allData[allDataIndex][colName] = "";
 
                   if (colName === 'Đơn vị vận chuyển') {
@@ -2405,20 +2405,20 @@
               });
 
               clearCount++;
-              // console.log(`✅ Cell ${index + 1} prepared for clearing`);
+              // // console.log(`✅ Cell ${index + 1} prepared for clearing`);
             } else {
-              console.log(`❌ Invalid primary key for cell ${index + 1}`);
+              // console.log(`❌ Invalid primary key for cell ${index + 1}`);
             }
           } else {
-            // console.log(`ℹ️ Cell ${index + 1} already empty`);
+            // // console.log(`ℹ️ Cell ${index + 1} already empty`);
           }
         } else {
-          console.log(`❌ Cell ${index + 1} is not editable`);
+          // console.log(`❌ Cell ${index + 1} is not editable`);
         }
       });
 
-      // console.log(`Total cells to clear: ${clearCount}`);
-      // console.log('Batch updates payload:', batchUpdates);
+      // // console.log(`Total cells to clear: ${clearCount}`);
+      // // console.log('Batch updates payload:', batchUpdates);
 
       // 4. Gọi API bulk update nếu có dữ liệu
       if (batchUpdates.length > 0) {
@@ -2430,7 +2430,7 @@
 
     // Hàm mới để xử lý bulk update cho việc xóa
     async function processBulkClearUpdate(batchUpdates, clearCount) {
-      // console.log('📡 Sending bulk clear update to API');
+      // // console.log('📡 Sending bulk clear update to API');
       try {
         const response = await fetch(UPDATE_BULK_URL, {
           method: "PATCH",
@@ -2444,7 +2444,7 @@
           throw new Error(result.message || 'Lỗi không xác định từ server');
         }
 
-        // console.log('✅ Bulk clear update successful');
+        // // console.log('✅ Bulk clear update successful');
         showTempMessage(`Đã xóa và cập nhật ${clearCount} ô thành công`);
 
         // Xóa khỏi pending changes nếu thành công
@@ -2469,13 +2469,13 @@
     }
 
     function updateCellValue(cell, value) {
-      // console.log('🔧 updateCellValue() called');
-      // console.log('Cell:', cell);
-      // console.log('Value to set:', value);
-      // console.log('Cell classList:', cell?.classList?.toString());
+      // // console.log('🔧 updateCellValue() called');
+      // // console.log('Cell:', cell);
+      // // console.log('Value to set:', value);
+      // // console.log('Cell classList:', cell?.classList?.toString());
 
       if (!cell || !cell.classList.contains("editable")) {
-        console.log('❌ Cell is not editable or null');
+        // console.log('❌ Cell is not editable or null');
         return false;
       }
 
@@ -2483,33 +2483,33 @@
       const dateInput = cell.querySelector("input.date-input");
       let changed = false;
 
-      // console.log('Select element found:', !!select);
-      // console.log('Date input found:', !!dateInput);
+      // // console.log('Select element found:', !!select);
+      // // console.log('Date input found:', !!dateInput);
 
       if (select) {
-        // console.log('Current select value:', select.value);
-        // console.log('New value:', value);
+        // // console.log('Current select value:', select.value);
+        // // console.log('New value:', value);
         // 🔥 FIX: Cho phép xóa dropdown bằng cách set value = ""
         if (select.value !== value) {
           select.value = value; // value có thể là "" để xóa
-          // console.log('✅ Select value changed to:', select.value);
+          // // console.log('✅ Select value changed to:', select.value);
           select.dispatchEvent(new Event("change", {
             bubbles: true
           })); // Kích hoạt sự kiện change để logic trong renderTableBody chạy
           changed = true;
         } else {
-          // console.log('ℹ️ Select value unchanged');
+          // // console.log('ℹ️ Select value unchanged');
         }
       } else if (dateInput) {
-        // console.log('📅 Processing date input');
+        // // console.log('📅 Processing date input');
         // Logic for date input if any
       } else if (cell.textContent !== value) {
-        // console.log('📝 Processing text cell');
-        // console.log('Current text:', cell.textContent);
-        // console.log('New value:', value);
+        // // console.log('📝 Processing text cell');
+        // // console.log('Current text:', cell.textContent);
+        // // console.log('New value:', value);
         cell.textContent = value;
         cell.classList.add("highlight");
-        // console.log('✅ Text cell updated');
+        // // console.log('✅ Text cell updated');
         changed = true;
         const tr = cell.closest("tr");
         const config = allTabConfigs.find(c => c.table.body === cell.closest("tbody").id);
@@ -2518,7 +2518,7 @@
 
         // 🔥 FIX: Lấy primaryKey trực tiếp từ DOM thay vì dựa vào rowIndex
         const primaryKey = getOrderCodeFromCell(cell);
-        // console.log('🔑 Primary key from DOM:', primaryKey);
+        // // console.log('🔑 Primary key from DOM:', primaryKey);
 
         if (primaryKey && primaryKey !== 'N/A' && primaryKey !== 'ERROR') {
           // === START: CODE ĐÃ SỬA LỖI ===
@@ -2526,7 +2526,7 @@
           if (config && !isNaN(rowIndex)) {
             const dataArray = config.data();
             if (dataArray && dataArray[rowIndex]) {
-              // console.log('📊 Updating data array at index:', rowIndex);
+              // // console.log('📊 Updating data array at index:', rowIndex);
               dataArray[rowIndex][colName] = value; // value ở đây là ""
 
               if (colName === 'Đơn vị vận chuyển') {
@@ -2534,10 +2534,10 @@
                 dataArray[rowIndex]["Ngày Kế toán đối soát với FFM lần 2"] = timestamp;
               }
             } else {
-              console.log('⚠️ DataArray or rowIndex invalid:', { dataArray: !!dataArray, rowIndex });
+              // console.log('⚠️ DataArray or rowIndex invalid:', { dataArray: !!dataArray, rowIndex });
             }
           } else {
-            console.log('⚠️ Config or rowIndex invalid:', { config: !!config, rowIndex });
+            // console.log('⚠️ Config or rowIndex invalid:', { config: !!config, rowIndex });
           }
           // === END: CODE ĐÃ SỬA LỖI ===
 
@@ -2555,17 +2555,17 @@
             }
           }
 
-          // console.log('📡 Sending API update:', { primaryKey, updates });
+          // // console.log('📡 Sending API update:', { primaryKey, updates });
           processCellUpdate(primaryKey, updates);
         } else {
-          console.log('❌ Invalid primary key, skipping API update');
+          // console.log('❌ Invalid primary key, skipping API update');
         }
         changed = true;
       } else {
-        console.log('ℹ️ No change needed for this cell type');
+        // console.log('ℹ️ No change needed for this cell type');
       }
 
-      // console.log('🔧 updateCellValue result:', changed);
+      // // console.log('🔧 updateCellValue result:', changed);
       return changed;
     }
 
@@ -2813,7 +2813,7 @@
       // 🔧 FIX: Clear selectedCells sau khi filter để tránh confusion
       // selectedCells.forEach(cell => cell.classList.remove("cell-selected"));
       // selectedCells.clear();
-      // console.log('🔄 Cleared selectedCells after filter');
+      // // console.log('🔄 Cleared selectedCells after filter');
 
       // Cập nhật sticky columns và cell selection
       setTimeout(() => {
@@ -3073,7 +3073,7 @@
       }
 
       const endTime = performance.now();
-      console.log(`⚡ Rendered ${data.length} rows in ${(endTime - startTime).toFixed(0)}ms`);
+      // console.log(`⚡ Rendered ${data.length} rows in ${(endTime - startTime).toFixed(0)}ms`);
 
       updateStickyColumns(config);
     }
@@ -3125,8 +3125,8 @@
         if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c' && selectedCells.size > 0) { e.preventDefault(); copySelectedCells() }
         else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v' && selectedCells.size > 0) { e.preventDefault(); navigator.clipboard.readText().then(text => pasteToSelectedCells(text)).catch(err => console.error('Lỗi đọc clipboard:', err)) }
         else if ((e.key === 'Delete' || e.key === 'Backspace') && selectedCells.size > 0) {
-          // console.log('🗑️ Delete/Backspace key pressed'); 
-          // console.log('Selected cells size:', selectedCells.size);
+          // // console.log('🗑️ Delete/Backspace key pressed'); 
+          // // console.log('Selected cells size:', selectedCells.size);
           e.preventDefault();
           clearSelectedCells()
         }
@@ -3215,7 +3215,7 @@
       const cached = pageCache.get(page);
       const now = Date.now();
       if (cached && (now - cached.timestamp) < CACHE_TTL_MS) {
-        console.log(`⚡ Cache HIT for page ${page}`);
+        // console.log(`⚡ Cache HIT for page ${page}`);
         displayPageData(cached.data, cached.meta);
         prefetchNextPage(page + 1); // Prefetch next
         return;
@@ -3232,7 +3232,7 @@
 
         // Fetch from DB
         const url = `${DB_DATA_URL}?page=${page}&limit=${pageSize}&sortBy=id&order=asc`;
-        console.log(`📊 Fetching page ${page} from DB...`);
+        // console.log(`📊 Fetching page ${page} from DB...`);
 
         const response = await fetch(url);
         const json = await response.json();
@@ -3249,7 +3249,7 @@
 
         // Save to cache
         pageCache.set(page, { data, meta, timestamp: Date.now() });
-        console.log(`✅ Page ${page} loaded & cached (${data.length} rows)`);
+        // console.log(`✅ Page ${page} loaded & cached (${data.length} rows)`);
 
         // Display
         displayPageData(data, meta);
@@ -3295,7 +3295,7 @@
       isPrefetching = true;
       try {
         const url = `${DB_DATA_URL}?page=${page}&limit=${pageSize}&sortBy=id&order=asc`;
-        console.log(`🔮 Prefetching page ${page}...`);
+        // console.log(`🔮 Prefetching page ${page}...`);
 
         const response = await fetch(url);
         const json = await response.json();
@@ -3307,7 +3307,7 @@
             totalPages: json.meta?.totalPages || 1
           };
           pageCache.set(page, { data, meta, timestamp: Date.now() });
-          console.log(`✅ Prefetched page ${page} (${data.length} rows)`);
+          // console.log(`✅ Prefetched page ${page} (${data.length} rows)`);
         }
       } catch (err) {
         console.warn('Prefetch failed:', err.message);
@@ -3362,7 +3362,7 @@
       setupControls();
       loadData().then(() => {
         // Skip SSE on Vercel, use polling directly (3-second interval)
-        console.log('🔄 Starting real-time polling sync...');
+        // console.log('🔄 Starting real-time polling sync...');
         startPollingFallback();
       });
 
@@ -3378,7 +3378,7 @@
       // Auto refresh page every 30 minutes
       const AUTO_REFRESH_INTERVAL = 30 * 60 * 1000; // 30 minutes
       setInterval(() => {
-        console.log('🔄 Auto-refreshing page (30 minute interval)...');
+        // console.log('🔄 Auto-refreshing page (30 minute interval)...');
         window.location.reload();
       }, AUTO_REFRESH_INTERVAL);
     });
