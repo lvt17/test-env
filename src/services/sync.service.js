@@ -1,14 +1,21 @@
 import databaseService from './database.service.js';
 import GoogleSheetsService from './googleSheets.service.js';
+import { normalizeStatus, STATUS_COLUMNS, getDisplayValue } from '../utils/statusNormalization.js';
 
 const googleSheetsService = new GoogleSheetsService();
 
 /**
- * Normalize Vietnamese Unicode to NFC form
- * Handles differences like Huỷ (ỷ) vs Hủy (ủ)
+ * Normalize value - uses normalizeStatus for status columns, NFC for others
  */
-function normalizeUnicode(value) {
+function normalizeValue(value, dbColumn = null) {
     if (typeof value !== 'string') return value;
+
+    // For status columns, apply full normalization (lowercase + NFC)
+    if (dbColumn && STATUS_COLUMNS.includes(dbColumn)) {
+        return normalizeStatus(value);
+    }
+
+    // For other columns, just apply NFC
     return value.normalize('NFC');
 }
 
@@ -118,7 +125,7 @@ class SyncService {
 
         for (const [sheetCol, value] of Object.entries(sheetRow)) {
             // Normalize column name for lookup
-            const normalizedCol = normalizeUnicode(sheetCol);
+            const normalizedCol = sheetCol.normalize('NFC');
             const dbCol = this.columnToDbName(normalizedCol);
 
             if (dbCol && value !== undefined && value !== null && value !== '') {
@@ -129,8 +136,8 @@ class SyncService {
                         dbRow[dbCol] = dateValue.toISOString().split('T')[0];
                     }
                 } else {
-                    // Normalize Unicode value
-                    dbRow[dbCol] = normalizeUnicode(value);
+                    // Normalize value (lowercase for status columns)
+                    dbRow[dbCol] = normalizeValue(value, dbCol);
                 }
             }
         }
@@ -139,7 +146,7 @@ class SyncService {
     }
 
     /**
-     * Convert DB row to Sheet format (with Unicode normalization)
+     * Convert DB row to Sheet format (display values for frontend)
      */
     dbRowToSheetRow(dbRow) {
         const sheetRow = { rowIndex: dbRow.id };
@@ -149,8 +156,13 @@ class SyncService {
                 continue;
             }
             const sheetCol = this.dbNameToColumn(dbCol);
-            // Normalize Unicode value for consistent display
-            sheetRow[sheetCol] = normalizeUnicode(value);
+
+            // For status columns, convert lowercase DB value to display value
+            if (STATUS_COLUMNS.includes(dbCol) && value) {
+                sheetRow[sheetCol] = getDisplayValue(sheetCol, value);
+            } else {
+                sheetRow[sheetCol] = value;
+            }
         }
 
         return sheetRow;

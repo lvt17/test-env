@@ -1,13 +1,16 @@
 import syncQueueService from '../services/syncQueue.service.js';
 import sseController from './sse.controller.js';
 import databaseService from '../services/database.service.js';
+import { normalizeStatus, STATUS_COLUMNS } from '../utils/statusNormalization.js';
 
 /**
- * Normalize Vietnamese Unicode to NFC form
- * Handles differences like Huỷ (ỷ) vs Hủy (ủ)
+ * Normalize value - lowercase+NFC for status columns, NFC only for others
  */
-function normalizeUnicode(value) {
+function normalizeValue(value, dbColumn = null) {
     if (typeof value !== 'string') return value;
+    if (dbColumn && STATUS_COLUMNS.includes(dbColumn)) {
+        return normalizeStatus(value);
+    }
     return value.normalize('NFC');
 }
 
@@ -67,13 +70,14 @@ class WebhookController {
                         'Nhân viên Sale': 'nhan_vien_sale'
                     };
 
-                    const dbUpdate = { ma_don_hang: normalizeUnicode(primaryKey) };
+                    const dbUpdate = { ma_don_hang: primaryKey.normalize('NFC') };
                     for (const [sheetCol, value] of Object.entries(changedFields)) {
-                        // Normalize both column name and value
-                        const normalizedCol = normalizeUnicode(sheetCol);
+                        // Normalize column name for lookup
+                        const normalizedCol = sheetCol.normalize('NFC');
                         const dbCol = sheetToDbMapping[normalizedCol];
                         if (dbCol) {
-                            dbUpdate[dbCol] = normalizeUnicode(value);
+                            // Apply lowercase normalization for status columns
+                            dbUpdate[dbCol] = normalizeValue(value, dbCol);
                         }
                     }
 

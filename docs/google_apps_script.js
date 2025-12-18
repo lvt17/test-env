@@ -170,3 +170,81 @@ function testWebhook() {
     sendWebhook(testPayload);
     SpreadsheetApp.getUi().alert('✅ Test webhook đã được gửi!\n\nKiểm tra console log để xem kết quả.');
 }
+
+// ========== DATA VALIDATION (Dropdown) ==========
+
+/**
+ * Status options for each column
+ * These match the web frontend dropdowns
+ */
+const STATUS_OPTIONS = {
+    'Kết quả Check': ['', 'OK', 'Huỷ', 'Treo', 'Vận đơn XL', 'Đợi hàng', 'Khách hẹn'],
+    'Trạng thái giao hàng NB': ['', 'Giao Thành Công', 'Đang Giao', 'Chưa Giao', 'Huỷ', 'Hoàn', 'Chờ Check', 'Giao không thành công', 'Bom_Thất Lạc'],
+    'Trạng thái thu tiền': ['', 'Có bill', 'Có bill 1 phần', 'Bom_bùng_chặn', 'Hẹn Thanh Toán', 'Hoàn Hàng', 'Khó Đòi', 'Không nhận được hàng', 'Không PH dưới 3N', 'Thanh toán phí hoàn', 'KPH nhiều ngày']
+};
+
+/**
+ * Column letter mapping for status columns
+ * Adjust these based on your actual Sheet columns
+ */
+const STATUS_COLUMNS_MAP = {
+    'Kết quả Check': 'B',           // Column B
+    'Trạng thái giao hàng NB': 'C', // Column C
+    'Trạng thái thu tiền': 'F'      // Column F
+};
+
+/**
+ * Chạy hàm này để thêm dropdown validation cho các cột status
+ * Vào Extensions → Apps Script → Chạy hàm setupDataValidation
+ */
+function setupDataValidation() {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('F3');
+    if (!sheet) {
+        SpreadsheetApp.getUi().alert('❌ Không tìm thấy sheet F3!');
+        return;
+    }
+
+    const lastRow = sheet.getMaxRows();
+    let columnsUpdated = 0;
+
+    for (const [columnName, colLetter] of Object.entries(STATUS_COLUMNS_MAP)) {
+        const options = STATUS_OPTIONS[columnName];
+        if (!options) continue;
+
+        // Create data validation rule
+        const rule = SpreadsheetApp.newDataValidation()
+            .requireValueInList(options, true)  // true = show dropdown
+            .setAllowInvalid(false)             // Bắt buộc chọn từ list
+            .build();
+
+        // Apply to entire column (except header)
+        const range = sheet.getRange(colLetter + '2:' + colLetter + lastRow);
+        range.setDataValidation(rule);
+
+        columnsUpdated++;
+        console.log(`✅ Added dropdown to column ${colLetter} (${columnName})`);
+    }
+
+    SpreadsheetApp.getUi().alert(
+        `✅ Đã thêm dropdown cho ${columnsUpdated} cột!\n\n` +
+        `Các cột: ${Object.keys(STATUS_COLUMNS_MAP).join(', ')}\n\n` +
+        `Giờ bạn có thể chọn giá trị từ dropdown khi edit.`
+    );
+}
+
+/**
+ * Xóa data validation (nếu cần)
+ */
+function removeDataValidation() {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('F3');
+    if (!sheet) return;
+
+    const lastRow = sheet.getMaxRows();
+
+    for (const colLetter of Object.values(STATUS_COLUMNS_MAP)) {
+        const range = sheet.getRange(colLetter + '2:' + colLetter + lastRow);
+        range.clearDataValidations();
+    }
+
+    SpreadsheetApp.getUi().alert('✅ Đã xóa tất cả data validation.');
+}
