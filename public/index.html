@@ -1183,7 +1183,7 @@
 
         // === PHẦN SỬA LỖI CHÍNH NẰM Ở ĐÂY ===
         // 1. Tạo thông báo thành công dựa trên số lượng bản ghi đã gửi đi.
-        showTempMessage(`Cập nhật thành công ${payload.length} đơn hàng. Đang tải lại dữ liệu...`);
+        showTempMessage(`Cập nhật thành công ${payload.length} đơn hàng. Đang đồng bộ...`);
 
         // 2. Xóa các thay đổi đang chờ trong localStorage vì chúng đã được cập nhật thành công.
         clearPendingChanges();
@@ -1191,8 +1191,13 @@
         // 3. Ẩn popover đi.
         hideStatusPopover();
 
-        // 4. Tải lại toàn bộ dữ liệu để đảm bảo giao diện đồng bộ 100% với server.
-        setTimeout(loadData, 1000);
+        // 4. Flush queue để đảm bảo DB được cập nhật trước khi reload data
+        try {
+          await fetch(`${BASE_URL}/sync/flush-queue`, { method: 'POST' });
+        } catch (e) { /* ignore flush errors */ }
+        
+        // 5. Tải lại dữ liệu sau khi queue đã được xử lý
+        loadData();
 
       } catch (error) {
         // console.error("Lỗi khi cập nhật từ popover:", error);
