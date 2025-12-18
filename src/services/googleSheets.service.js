@@ -832,10 +832,12 @@ class GoogleSheetsService {
 
       const primaryKeyColumn = headers[0]; // Cột đầu tiên là primary key
 
-      // Lấy tất cả dữ liệu hiện có để kiểm tra trùng lặp
+      // OPTIMIZED: Chỉ lấy cột Primary Key để kiểm tra trùng lặp (A:A thay vì A:Z)
+      // Giảm từ ~50MB xuống ~2MB cho 50k rows
       const existingDataResponse = await sheets.spreadsheets.values.get({
         spreadsheetId: SPREADSHEET_ID,
-        range: `${sheetName}!A:${String.fromCharCode(64 + headers.length)}`
+        range: `${sheetName}!A:A`,  // Chỉ đọc cột A (Primary Key)
+        valueRenderOption: 'UNFORMATTED_VALUE'
       });
 
       const existingData = existingDataResponse.data.values || [];

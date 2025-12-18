@@ -222,8 +222,8 @@ class SyncController {
         try {
             const { count = 100, startIndex = 11 } = req.body;
 
-            // Limit to prevent abuse
-            const maxCount = 10000;
+            // Limit to prevent abuse (increased for 50k scale testing)
+            const maxCount = 50000;
             const actualCount = Math.min(count, maxCount);
 
             console.log(`🎲 Generating ${actualCount} mock orders starting from ${startIndex}...`);
@@ -348,6 +348,68 @@ class SyncController {
 
         } catch (error) {
             console.error('❌ Background sync failed:', error.message);
+        }
+    }
+
+    /**
+     * POST /sync/update-prices
+     * Update prices for existing mock data (fixes 0 values)
+     */
+    async updatePrices(req, res) {
+        try {
+            await databaseService.connect();
+
+            if (!databaseService.isAvailable()) {
+                return res.status(503).json({
+                    success: false,
+                    message: 'Database not available'
+                });
+            }
+
+            console.log('📊 Updating prices for all orders with 0 values...');
+            const startTime = Date.now();
+
+            // Update all rows with random prices between 50,000 and 500,000 VND
+            const query = `
+                UPDATE orders 
+                SET 
+                    gia_ban = FLOOR(RANDOM() * 450000 + 50000),
+                    tong_tien_vnd = FLOOR(RANDOM() * 450000 + 50000)
+                WHERE gia_ban = 0 OR gia_ban IS NULL OR tong_tien_vnd = 0 OR tong_tien_vnd IS NULL;
+            `;
+
+            const result = await databaseService.query(query);
+            const duration = Date.now() - startTime;
+
+            // Verify
+            const stats = await databaseService.query(`
+                SELECT 
+                    COUNT(*) as total,
+                    AVG(gia_ban) as avg_price,
+                    MIN(gia_ban) as min_price,
+                    MAX(gia_ban) as max_price
+                FROM orders
+            `);
+
+            res.json({
+                success: true,
+                message: `Updated ${result.rowCount} orders with random prices`,
+                updated: result.rowCount,
+                duration: `${duration}ms`,
+                stats: {
+                    total: parseInt(stats.rows[0].total),
+                    avgPrice: Math.round(parseFloat(stats.rows[0].avg_price)),
+                    minPrice: Math.round(parseFloat(stats.rows[0].min_price)),
+                    maxPrice: Math.round(parseFloat(stats.rows[0].max_price))
+                }
+            });
+
+        } catch (error) {
+            console.error('❌ Update prices failed:', error);
+            res.status(500).json({
+                success: false,
+                message: error.message
+            });
         }
     }
 }

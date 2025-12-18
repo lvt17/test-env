@@ -47,35 +47,46 @@ class WebhookController {
 
             // === Update database with Sheet changes (Unicode normalized) ===
             let dbUpdated = false;
-            if (primaryKey && changedFields && Object.keys(changedFields).length > 0) {
+
+            // Convert Sheet column names to DB column names
+            const sheetToDbMapping = {
+                'Mã đơn hàng': 'ma_don_hang',
+                'Mã Tracking': 'ma_tracking',
+                'Ngày lên đơn': 'ngay_len_don',
+                'Name*': 'name',
+                'Phone*': 'phone',
+                'Add': 'address',
+                'City': 'city',
+                'State': 'state',
+                'khu vực': 'khu_vuc',
+                'Trạng thái giao hàng NB': 'trang_thai_giao_hang_nb',
+                'Kết quả Check': 'ket_qua_check',
+                'Lý do': 'ly_do',
+                'Trạng thái thu tiền': 'trang_thai_thu_tien',
+                'Ghi chú của VĐ': 'ghi_chu',
+                'Nhân viên Sale': 'nhan_vien_sale',
+                'Mặt hàng': 'mat_hang',
+                'Tên mặt hàng 1': 'ten_mat_hang_1',
+                'Số lượng mặt hàng 1': 'so_luong_mat_hang_1',
+                'Giá bán': 'gia_ban',
+                'Tổng tiền VNĐ': 'tong_tien_vnd',
+                'Team': 'team',
+                'Khu vực': 'khu_vuc'
+            };
+
+            // Use fullRowData for new rows, changedFields for edits
+            const dataSource = req.body.fullRowData || changedFields;
+
+            if (primaryKey && dataSource && Object.keys(dataSource).length > 0) {
                 try {
                     await databaseService.connect();
 
-                    // Convert Sheet column names to DB column names
-                    const sheetToDbMapping = {
-                        'Mã đơn hàng': 'ma_don_hang',
-                        'Mã Tracking': 'ma_tracking',
-                        'Ngày lên đơn': 'ngay_len_don',
-                        'Name*': 'name',
-                        'Phone*': 'phone',
-                        'Add': 'address',
-                        'City': 'city',
-                        'State': 'state',
-                        'khu vực': 'khu_vuc',
-                        'Trạng thái giao hàng NB': 'trang_thai_giao_hang_nb',
-                        'Kết quả Check': 'ket_qua_check',
-                        'Lý do': 'ly_do',
-                        'Trạng thái thu tiền': 'trang_thai_thu_tien',
-                        'Ghi chú của VĐ': 'ghi_chu',
-                        'Nhân viên Sale': 'nhan_vien_sale'
-                    };
-
                     const dbUpdate = { ma_don_hang: primaryKey.normalize('NFC') };
-                    for (const [sheetCol, value] of Object.entries(changedFields)) {
+                    for (const [sheetCol, value] of Object.entries(dataSource)) {
                         // Normalize column name for lookup
                         const normalizedCol = sheetCol.normalize('NFC');
                         const dbCol = sheetToDbMapping[normalizedCol];
-                        if (dbCol) {
+                        if (dbCol && value !== undefined && value !== '') {
                             // Apply lowercase normalization for status columns
                             dbUpdate[dbCol] = normalizeValue(value, dbCol);
                         }
@@ -83,7 +94,8 @@ class WebhookController {
 
                     await databaseService.upsertOrder(dbUpdate);
                     dbUpdated = true;
-                    console.log(`✅ DB updated for ${primaryKey}:`, Object.keys(changedFields));
+                    const isNewRow = req.body.isNewRow ? '(NEW)' : '(UPDATE)';
+                    console.log(`✅ DB ${isNewRow} for ${primaryKey}:`, Object.keys(dataSource).length, 'fields');
                 } catch (dbErr) {
                     console.error(`❌ DB update failed:`, dbErr.message);
                 }

@@ -63,5 +63,11 @@ router.post('/generate-mock', syncController.generateMockData);
  */
 router.post('/db-to-sheet', syncController.syncDbToSheet);
 
+/**
+ * POST /sync/update-prices
+ * Update prices for mock data (fixes 0 values)
+ */
+router.post('/update-prices', syncController.updatePrices);
+
 export default router;
 

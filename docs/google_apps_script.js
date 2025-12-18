@@ -37,13 +37,31 @@ function onEdit(e) {
         const row = range.getRow();
         const column = range.getColumn();
 
+        // Skip header row
+        if (row === 1) return;
+
         // Lấy primary key (giả sử cột A là primary key)
         const primaryKey = sheet.getRange(row, 1).getValue();
+        if (!primaryKey) return; // Skip if no primary key
 
         // Lấy tên cột (header)
         const headerRow = sheet.getRange(1, column).getValue();
 
-        // Chuẩn bị payload
+        // Lấy tất cả headers
+        const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+
+        // Lấy toàn bộ row data
+        const rowData = sheet.getRange(row, 1, 1, sheet.getLastColumn()).getValues()[0];
+
+        // Tạo object với full row data
+        const fullRowData = {};
+        for (let i = 0; i < headers.length; i++) {
+            if (headers[i] && rowData[i] !== undefined && rowData[i] !== '') {
+                fullRowData[headers[i]] = rowData[i];
+            }
+        }
+
+        // Chuẩn bị payload với full row data
         const payload = {
             sheetName: sheetName,
             range: range.getA1Notation(),
@@ -56,7 +74,9 @@ function onEdit(e) {
             primaryKey: primaryKey,
             changedFields: {
                 [headerRow]: e.value
-            }
+            },
+            fullRowData: fullRowData,  // Gửi toàn bộ row data cho upsert
+            isNewRow: e.oldValue === undefined  // Đánh dấu row mới
         };
 
         // Gửi webhook

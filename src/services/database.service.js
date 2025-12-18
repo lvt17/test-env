@@ -163,11 +163,11 @@ class DatabaseService {
         try {
             await client.query('BEGIN');
 
-            // Define columns we're inserting
+            // Define columns we're inserting (including price fields)
             const columns = ['ma_don_hang', 'ma_tracking', 'ngay_len_don', 'name', 'phone',
                 'address', 'city', 'state', 'mat_hang', 'ten_mat_hang_1', 'so_luong_mat_hang_1',
                 'ket_qua_check', 'trang_thai_giao_hang_nb', 'ly_do', 'trang_thai_thu_tien',
-                'khu_vuc', 'team'];
+                'gia_ban', 'tong_tien_vnd', 'khu_vuc', 'team'];
 
             // Build VALUES clause
             const valueRows = [];
