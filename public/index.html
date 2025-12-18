@@ -1195,7 +1195,7 @@
         try {
           await fetch(`${BASE_URL}/sync/flush-queue`, { method: 'POST' });
         } catch (e) { /* ignore flush errors */ }
-        
+
         // 5. Tải lại dữ liệu sau khi queue đã được xử lý
         loadData();
 
@@ -2032,7 +2032,7 @@
       // 4. Ghi vào bộ nhớ tạm
       navigator.clipboard.writeText(tsv).then(
         () => showTempMessage(`Đã sao chép ${visibleSelectedCells.length} ô đang hiển thị.`),
-        err => // console.error("Lỗi sao chép:", err)
+        err => { /* ignore copy error */ }
       );
     }
     async function pasteToSelectedCells(text) {
@@ -3128,7 +3128,7 @@
         if (activeEl && ['INPUT', 'SELECT', 'TEXTAREA'].includes(activeEl.tagName) && !activeEl.closest('td')) return;
         if (document.querySelector('td.editing')) return;
         if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c' && selectedCells.size > 0) { e.preventDefault(); copySelectedCells() }
-        else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v' && selectedCells.size > 0) { e.preventDefault(); navigator.clipboard.readText().then(text => pasteToSelectedCells(text)).catch(err => // console.error('Lỗi đọc clipboard:', err)) }
+        else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v' && selectedCells.size > 0) { e.preventDefault(); navigator.clipboard.readText().then(text => pasteToSelectedCells(text)).catch(err => { /* ignore clipboard error */ }) }
         else if ((e.key === 'Delete' || e.key === 'Backspace') && selectedCells.size > 0) {
           // // console.log('🗑️ Delete/Backspace key pressed'); 
           // // console.log('Selected cells size:', selectedCells.size);
