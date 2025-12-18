@@ -1195,7 +1195,7 @@
         setTimeout(loadData, 1000);
 
       } catch (error) {
-        console.error("Lỗi khi cập nhật từ popover:", error);
+        // console.error("Lỗi khi cập nhật từ popover:", error);
         // Hiển thị thông báo lỗi, không xóa thay đổi để người dùng có thể thử lại.
         showTempMessage(`Lỗi cập nhật: ${error.message}. Các thay đổi vẫn được lưu.`, true);
       } finally {
@@ -1263,7 +1263,7 @@
 
         // Error handler with auto-reconnect
         eventSource.onerror = (error) => {
-          console.error('❌ SSE error:', error);
+          // console.error('❌ SSE error:', error);
           updateSyncIndicator('error');
 
           // Close and attempt reconnect
@@ -1273,7 +1273,7 @@
         };
 
       } catch (error) {
-        console.error('❌ SSE initialization error:', error);
+        // console.error('❌ SSE initialization error:', error);
         updateSyncIndicator('error');
         scheduleReconnect();
       }
@@ -1377,7 +1377,7 @@
         updateSyncIndicator('polling');
 
       } catch (error) {
-        console.error('Poll error:', error.message);
+        // console.error('Poll error:', error.message);
         updateSyncIndicator('error');
       } finally {
         isSyncing = false;
@@ -1683,7 +1683,7 @@
       } else {
         date = new Date(dateInput);
         if (isNaN(date.getTime())) {
-          console.warn("⚠️ Invalid dateInput:", dateInput);
+          // // console.warn("⚠️ Invalid dateInput:", dateInput);
           return "Ngày không hợp lệ";
         }
       }
@@ -1756,7 +1756,7 @@
         }
       });
       if (staffNames.size === 0) {
-        console.warn("Không tìm thấy nhân viên nào hợp lệ cho các ID trong id1:", idArray);
+        // // console.warn("Không tìm thấy nhân viên nào hợp lệ cho các ID trong id1:", idArray);
       }
       return Array.from(staffNames);
     }
@@ -1825,7 +1825,7 @@
         const orderCode = getDOMCellValue(orderCodeCell);
         return orderCode || 'N/A';
       } catch (error) {
-        console.warn('Error getting order code:', error);
+        // // console.warn('Error getting order code:', error);
         return 'ERROR';
       }
     }
@@ -1898,7 +1898,7 @@
         showTempMessage(`Đã cập nhật đơn ${primaryKey}`);
         removePendingChange(primaryKey); // Xóa khỏi local storage nếu thành công
       } catch (error) {
-        console.error("Lỗi khi cập nhật tức thì:", error);
+        // console.error("Lỗi khi cập nhật tức thì:", error);
         showTempMessage(`Lỗi cập nhật đơn ${primaryKey}: ${error.message}. Đã lưu tạm.`, true);
         Object.entries(updates).forEach(([field, value]) => {
           savePendingChange(primaryKey, field, value); // Lưu vào local storage nếu thất bại
@@ -1958,7 +1958,7 @@
                     }
                   }
                 } else {
-                  console.error('❌ Không tìm thấy order code trong allData:', primaryKey);
+                  // console.error('❌ Không tìm thấy order code trong allData:', primaryKey);
                 }
               }
             }
@@ -1971,7 +1971,7 @@
 
             processCellUpdate(primaryKey, updates);
           } else {
-            console.error('❌ Không lấy được primary key từ DOM!');
+            // console.error('❌ Không lấy được primary key từ DOM!');
           }
         }
         input.removeEventListener("blur", onBlur);
@@ -2027,7 +2027,7 @@
       // 4. Ghi vào bộ nhớ tạm
       navigator.clipboard.writeText(tsv).then(
         () => showTempMessage(`Đã sao chép ${visibleSelectedCells.length} ô đang hiển thị.`),
-        err => console.error("Lỗi sao chép:", err)
+        err => // console.error("Lỗi sao chép:", err)
       );
     }
     async function pasteToSelectedCells(text) {
@@ -2301,7 +2301,7 @@
           });
 
         } catch (error) {
-          console.error("Lỗi khi cập nhật hàng loạt sau khi dán:", error);
+          // console.error("Lỗi khi cập nhật hàng loạt sau khi dán:", error);
           showTempMessage(`Đã dán ${pasteCount} giá trị nhưng có lỗi khi lưu. Đã lưu thay đổi tạm thời.`, true);
 
           batchUpdates.forEach(update => {
@@ -2389,7 +2389,7 @@
                     }
                   }
                 } else {
-                  console.warn(`⚠️ Could not find order ${primaryKey} in allData for clearing`);
+                  // // console.warn(`⚠️ Could not find order ${primaryKey} in allData for clearing`);
                 }
               }
 
@@ -2453,7 +2453,7 @@
         });
 
       } catch (error) {
-        console.error("❌ Lỗi khi xóa hàng loạt:", error);
+        // console.error("❌ Lỗi khi xóa hàng loạt:", error);
         showTempMessage(`Đã xóa ${clearCount} ô nhưng có lỗi khi lưu. Đã lưu thay đổi tạm thời.`, true);
 
         // Lưu vào pending changes nếu thất bại
@@ -2601,7 +2601,7 @@
       const mentionedStaffIds = (getUrlParameter('id1') || '').split(',').filter(id => id.trim() !== '');
       if (!staffId) {
         // 🔥 FIX: Render tất cả data khi không có staff ID thay vì chỉ hiện error
-        console.warn('Không tìm thấy staff ID, hiển thị tất cả dữ liệu');
+        // // console.warn('Không tìm thấy staff ID, hiển thị tất cả dữ liệu');
         document.getElementById('userInfo').textContent = 'Nhân viên: (Không xác định)';
         staffFilteredData = allData;
         initializeTab(mainTabConfig, staffFilteredData);
@@ -2648,7 +2648,7 @@
 
           // 🔥 FIX: Fallback - nếu không có data sau filter thì hiển thị tất cả
           if (staffFilteredData.length === 0) {
-            console.warn('⚠️ staffFilteredData rỗng, hiển thị tất cả allData');
+            // // console.warn('⚠️ staffFilteredData rỗng, hiển thị tất cả allData');
             staffFilteredData = allData;
           }
 
@@ -3123,7 +3123,7 @@
         if (activeEl && ['INPUT', 'SELECT', 'TEXTAREA'].includes(activeEl.tagName) && !activeEl.closest('td')) return;
         if (document.querySelector('td.editing')) return;
         if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c' && selectedCells.size > 0) { e.preventDefault(); copySelectedCells() }
-        else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v' && selectedCells.size > 0) { e.preventDefault(); navigator.clipboard.readText().then(text => pasteToSelectedCells(text)).catch(err => console.error('Lỗi đọc clipboard:', err)) }
+        else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v' && selectedCells.size > 0) { e.preventDefault(); navigator.clipboard.readText().then(text => pasteToSelectedCells(text)).catch(err => // console.error('Lỗi đọc clipboard:', err)) }
         else if ((e.key === 'Delete' || e.key === 'Backspace') && selectedCells.size > 0) {
           // // console.log('🗑️ Delete/Backspace key pressed'); 
           // // console.log('Selected cells size:', selectedCells.size);
@@ -3199,7 +3199,7 @@
         showTempMessage(`Cập nhật hàng loạt thành công ${result.summary.updated} đơn hàng.`);
         clearPendingChanges();
       } catch (error) {
-        console.error("Lỗi khi cập nhật hàng loạt:", error);
+        // console.error("Lỗi khi cập nhật hàng loạt:", error);
         showTempMessage(`Lỗi cập nhật. Vui lòng liên hệ lập trình viên.`, true);
       } finally {
         updateBtn.disabled = false;
@@ -3258,7 +3258,7 @@
         prefetchNextPage(page + 1);
 
       } catch (error) {
-        console.error('Error loading data:', error);
+        // console.error('Error loading data:', error);
         allTabConfigs.forEach(config => showError('Lỗi: ' + error.message, config.table.body));
       } finally {
         document.getElementById('loader-overlay').style.display = 'none';
@@ -3310,7 +3310,7 @@
           // console.log(`✅ Prefetched page ${page} (${data.length} rows)`);
         }
       } catch (err) {
-        console.warn('Prefetch failed:', err.message);
+        // // console.warn('Prefetch failed:', err.message);
       } finally {
         isPrefetching = false;
       }
