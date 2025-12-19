@@ -265,8 +265,8 @@ class UpdateQueueService {
             'ngay_doi_soat': 'Ngày Kế toán đối soát với FFM lần 2'
         };
 
-        // Convert to Sheet format
-        const sheetUpdate = { primaryKey: ma_don_hang };
+        // Convert to Sheet format - Use Vietnamese column name for primary key
+        const sheetUpdate = { 'Mã đơn hàng': ma_don_hang };
         for (const [dbCol, value] of Object.entries(fieldsToUpdate)) {
             const sheetCol = dbToSheetMapping[dbCol];
             if (sheetCol && value !== undefined) {
