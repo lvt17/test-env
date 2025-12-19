@@ -48,10 +48,15 @@ class WebhookController {
             // === Update database with Sheet changes (Unicode normalized) ===
             let dbUpdated = false;
 
-            // Convert Sheet column names to DB column names
+            // Convert Sheet column names to DB column names (must match UpdateQueueService mapping)
             const sheetToDbMapping = {
                 'Mã đơn hàng': 'ma_don_hang',
+                'Kết quả Check': 'ket_qua_check',
+                'Trạng thái giao hàng NB': 'trang_thai_giao_hang_nb',
                 'Mã Tracking': 'ma_tracking',
+                'Lý do': 'ly_do',
+                'Trạng thái thu tiền': 'trang_thai_thu_tien',
+                'Ghi chú của VĐ': 'ghi_chu_vd',
                 'Ngày lên đơn': 'ngay_len_don',
                 'Name*': 'name',
                 'Phone*': 'phone',
@@ -59,17 +64,31 @@ class WebhookController {
                 'City': 'city',
                 'State': 'state',
                 'khu vực': 'khu_vuc',
-                'Trạng thái giao hàng NB': 'trang_thai_giao_hang_nb',
-                'Kết quả Check': 'ket_qua_check',
-                'Lý do': 'ly_do',
-                'Trạng thái thu tiền': 'trang_thai_thu_tien',
-                'Ghi chú của VĐ': 'ghi_chu',
-                'Nhân viên Sale': 'nhan_vien_sale',
+                'Zipcode': 'zipcode',
                 'Mặt hàng': 'mat_hang',
                 'Tên mặt hàng 1': 'ten_mat_hang_1',
                 'Số lượng mặt hàng 1': 'so_luong_mat_hang_1',
+                'Tên mặt hàng 2': 'ten_mat_hang_2',
+                'Số lượng mặt hàng 2': 'so_luong_mat_hang_2',
+                'Quà tặng': 'qua_tang',
+                'Số lượng quà kèm': 'so_luong_qua_kem',
                 'Giá bán': 'gia_ban',
+                'Loại tiền thanh toán': 'loai_tien_thanh_toan',
                 'Tổng tiền VNĐ': 'tong_tien_vnd',
+                'Hình thức thanh toán': 'hinh_thuc_thanh_toan',
+                'Ghi chú': 'ghi_chu',
+                'Ngày đóng hàng': 'ngay_dong_hang',
+                'Trạng thái giao hàng': 'trang_thai_giao_hang',
+                'Thời gian giao dự kiến': 'thoi_gian_giao_du_kien',
+                'Phí ship nội địa Mỹ (usd)': 'phi_ship_noi_dia_my',
+                'Phí xử lý đơn đóng hàng-Lưu kho(usd)': 'phi_xu_ly_don',
+                'GHI CHÚ': 'ghi_chu_chung',
+                'Nhân viên Sale': 'nhan_vien_sale',
+                'NV Vận đơn': 'nv_van_don',
+                'Đơn vị vận chuyển': 'don_vi_van_chuyen',
+                'Số tiền của đơn hàng đã về TK Cty': 'so_tien_ve_tk',
+                'Kế toán xác nhận thu tiền về': 'ke_toan_xac_nhan',
+                'Ngày Kế toán đối soát với FFM lần 2': 'ngay_doi_soat',
                 'Team': 'team',
                 'Khu vực': 'khu_vuc'
             };
@@ -92,7 +111,8 @@ class WebhookController {
                         }
                     }
 
-                    await databaseService.upsertOrder(dbUpdate);
+                    // Pass source: 'sheet' for proper conflict resolution
+                    await databaseService.upsertOrder(dbUpdate, { source: 'sheet' });
                     dbUpdated = true;
                     const isNewRow = req.body.isNewRow ? '(NEW)' : '(UPDATE)';
                     console.log(`✅ DB ${isNewRow} for ${primaryKey}:`, Object.keys(dataSource).length, 'fields');
