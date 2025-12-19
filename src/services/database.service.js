@@ -362,6 +362,70 @@ class DatabaseService {
     `;
 
         await this.query(createTableQuery);
+
+        // Add missing columns to existing table (for tables created before schema update)
+        const addColumnsQuery = `
+      DO $$ 
+      BEGIN 
+        -- Add ghi_chu_vd if it doesn't exist
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='orders' AND column_name='ghi_chu_vd') THEN
+          ALTER TABLE orders ADD COLUMN ghi_chu_vd TEXT;
+        END IF;
+        
+        -- Add ngay_dong_hang if it doesn't exist
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='orders' AND column_name='ngay_dong_hang') THEN
+          ALTER TABLE orders ADD COLUMN ngay_dong_hang DATE;
+        END IF;
+        
+        -- Add trang_thai_giao_hang if it doesn't exist
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='orders' AND column_name='trang_thai_giao_hang') THEN
+          ALTER TABLE orders ADD COLUMN trang_thai_giao_hang VARCHAR(50);
+        END IF;
+        
+        -- Add thoi_gian_giao_du_kien if it doesn't exist
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='orders' AND column_name='thoi_gian_giao_du_kien') THEN
+          ALTER TABLE orders ADD COLUMN thoi_gian_giao_du_kien DATE;
+        END IF;
+        
+        -- Add phi_ship_noi_dia_my if it doesn't exist
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='orders' AND column_name='phi_ship_noi_dia_my') THEN
+          ALTER TABLE orders ADD COLUMN phi_ship_noi_dia_my NUMERIC(15,2) DEFAULT 0;
+        END IF;
+        
+        -- Add phi_xu_ly_don if it doesn't exist
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='orders' AND column_name='phi_xu_ly_don') THEN
+          ALTER TABLE orders ADD COLUMN phi_xu_ly_don NUMERIC(15,2) DEFAULT 0;
+        END IF;
+        
+        -- Add ghi_chu_chung if it doesn't exist
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='orders' AND column_name='ghi_chu_chung') THEN
+          ALTER TABLE orders ADD COLUMN ghi_chu_chung TEXT;
+        END IF;
+        
+        -- Add so_tien_ve_tk if it doesn't exist
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='orders' AND column_name='so_tien_ve_tk') THEN
+          ALTER TABLE orders ADD COLUMN so_tien_ve_tk NUMERIC(15,2) DEFAULT 0;
+        END IF;
+        
+        -- Add ke_toan_xac_nhan if it doesn't exist
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='orders' AND column_name='ke_toan_xac_nhan') THEN
+          ALTER TABLE orders ADD COLUMN ke_toan_xac_nhan VARCHAR(100);
+        END IF;
+        
+        -- Add ngay_doi_soat if it doesn't exist
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='orders' AND column_name='ngay_doi_soat') THEN
+          ALTER TABLE orders ADD COLUMN ngay_doi_soat DATE;
+        END IF;
+      END $$;
+    `;
+
+        try {
+            await this.query(addColumnsQuery);
+            console.log('✅ Database schema migrated - all columns added');
+        } catch (err) {
+            console.warn('⚠️ Migration warning:', err.message);
+        }
+
         console.log('✅ Database schema initialized');
     }
 
