@@ -122,11 +122,16 @@ class UpdateQueueService {
                 const { _source, _timestamp, _queuedAt, ...orderData } = update;
 
                 // Always update DB first
-                await databaseService.upsertOrder(orderData);
-                dbUpdated++;
+                const dbResult = await databaseService.upsertOrder(orderData, { source: _source, timestamp: _timestamp });
+                if (dbResult) {
+                    dbUpdated++;
+                    console.log(`🗄️ DB Sync [${_source}]: ${orderData.ma_don_hang} -> ${orderData.trang_thai_giao_hang_nb || 'updated'}`);
+                } else {
+                    console.log(`🗄️ DB Skip [${_source}]: ${orderData.ma_don_hang} (newer record already exists)`);
+                }
 
                 // Sync to Sheet (if source is web, update Sheet)
-                if (_source === 'web') {
+                if (_source === 'web' && dbResult) {
                     try {
                         await this.syncToSheet('F3', orderData);
                         sheetUpdated++;
