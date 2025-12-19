@@ -130,25 +130,45 @@ class DatabaseService {
      * Includes protection against stale updates from Sheet
      */
     async upsertOrder(orderData, context = {}) {
-        const columns = Object.keys(orderData).filter(col => !col.startsWith('_'));
+        // Filter out internal fields and invalid column names (containing . or special chars)
+        const validColumns = Object.keys(orderData).filter(col =>
+            !col.startsWith('_') &&
+            /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(col) // Only valid SQL identifiers
+        );
+
+        if (validColumns.length === 0) {
+            console.warn('⚠️ upsertOrder: No valid columns to insert');
+            return null;
+        }
+
+        const columns = validColumns;
         const values = columns.map(col => orderData[col]);
         const placeholders = columns.map((_, i) => `$${i + 1}`).join(', ');
 
         const source = context.source || 'web';
         const isFromSheet = source === 'sheet';
 
-        // Build UPDATE clause for conflict
-        const updateClause = columns
-            .filter(col => col !== 'ma_don_hang')
-            .map(col => `${col} = EXCLUDED.${col}`)
+        // Build UPDATE clause for conflict (escape column names with double quotes)
+        const updateColumns = columns.filter(col => col !== 'ma_don_hang');
+
+        if (updateColumns.length === 0) {
+            console.warn('⚠️ upsertOrder: No columns to update (only primary key)');
+            return null;
+        }
+
+        const updateClause = updateColumns
+            .map(col => `"${col}" = EXCLUDED."${col}"`)
             .join(', ');
+
+        // Escape column names in INSERT
+        const escapedColumns = columns.map(col => `"${col}"`).join(', ');
 
         // For web updates: ALWAYS execute (user intent is king)
         // For sheet updates: Only if timestamp is newer (prevent stale data)
         let query;
         if (isFromSheet) {
             query = `
-        INSERT INTO orders (${columns.join(', ')})
+        INSERT INTO orders (${escapedColumns})
         VALUES (${placeholders})
         ON CONFLICT (ma_don_hang) 
         DO UPDATE SET 
@@ -160,7 +180,7 @@ class DatabaseService {
         } else {
             // Web updates: ALWAYS execute, no WHERE clause
             query = `
-        INSERT INTO orders (${columns.join(', ')})
+        INSERT INTO orders (${escapedColumns})
         VALUES (${placeholders})
         ON CONFLICT (ma_don_hang) 
         DO UPDATE SET 
@@ -170,8 +190,15 @@ class DatabaseService {
       `;
         }
 
-        const result = await this.query(query, values);
-        return result.rows[0];
+        try {
+            const result = await this.query(query, values);
+            return result.rows[0];
+        } catch (err) {
+            console.error('❌ upsertOrder SQL error:', err.message);
+            console.error('Query:', query.substring(0, 200));
+            console.error('Columns:', columns);
+            throw err;
+        }
     }
 
     /**
