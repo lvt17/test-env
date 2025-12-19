@@ -1186,18 +1186,29 @@
         // 1. Tạo thông báo thành công dựa trên số lượng bản ghi đã gửi đi.
         showTempMessage(`Cập nhật thành công ${payload.length} đơn hàng. Đang đồng bộ...`);
 
-        // 2. Xóa các thay đổi đang chờ trong localStorage vì chúng đã được cập nhật thành công.
+        // 2. OPTIMISTIC UPDATE: Apply changes to allData immediately (prevents A→B→A→B flicker)
+        payload.forEach(change => {
+          const pk = change['Mã đơn hàng'];
+          if (pk && allData) {
+            const record = allData.find(r => r['Mã đơn hàng'] === pk);
+            if (record) {
+              Object.assign(record, change);
+            }
+          }
+        });
+
+        // 3. Xóa các thay đổi đang chờ trong localStorage vì chúng đã được cập nhật thành công.
         clearPendingChanges();
 
-        // 3. Ẩn popover đi.
+        // 4. Ẩn popover đi.
         hideStatusPopover();
 
-        // 4. Flush queue để đảm bảo DB được cập nhật trước khi reload data
+        // 5. Flush queue để đảm bảo DB được cập nhật (await ensures it completes)
         try {
           await fetch(`${mainHost}/sync/flush-queue`, { method: 'POST' });
         } catch (e) { /* ignore flush errors */ }
 
-        // 5. Tải lại dữ liệu sau khi queue đã được xử lý, dùng forceRefresh để tránh cache cũ
+        // 6. Tải lại dữ liệu sau khi queue đã được xử lý, dùng forceRefresh để tránh cache cũ
         loadData(currentPage, true, true);
 
       } catch (error) {

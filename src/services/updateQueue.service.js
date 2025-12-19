@@ -274,10 +274,16 @@ class UpdateQueueService {
             }
         }
 
+        console.log(`📤 Preparing Sheet sync for ${ma_don_hang}:`, {
+            dbFields: Object.keys(fieldsToUpdate),
+            sheetFields: Object.keys(sheetUpdate).filter(k => k !== 'primaryKey'),
+            sheetUpdate
+        });
+
         // Use existing updateSingleByPrimaryKey method
         const result = await sheetsService.updateSingleByPrimaryKey(sheetName, sheetUpdate);
 
-        console.log(`📤 Synced to Sheet: ${ma_don_hang}`);
+        console.log(`✅ Sheet synced: ${ma_don_hang}`, result ? 'success' : 'no result');
         return result;
     }
 
