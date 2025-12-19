@@ -173,19 +173,45 @@ class UpdateQueueService {
 
         // Convert DB column names to Sheet column names
         const dbToSheetMapping = {
+            'ma_don_hang': 'Mã đơn hàng',
+            'ket_qua_check': 'Kết quả Check',
+            'trang_thai_giao_hang_nb': 'Trạng thái giao hàng NB',
             'ma_tracking': 'Mã Tracking',
+            'ly_do': 'Lý do',
+            'trang_thai_thu_tien': 'Trạng thái thu tiền',
+            'ghi_chu_vd': 'Ghi chú của VĐ',
             'ngay_len_don': 'Ngày lên đơn',
             'name': 'Name*',
             'phone': 'Phone*',
             'address': 'Add',
             'city': 'City',
             'state': 'State',
-            'trang_thai_giao_hang_nb': 'Trạng thái giao hàng NB',
-            'ket_qua_check': 'Kết quả Check',
-            'ly_do': 'Lý do',
+            'khu_vuc': 'khu vực',
+            'zipcode': 'Zipcode',
+            'mat_hang': 'Mặt hàng',
+            'ten_mat_hang_1': 'Tên mặt hàng 1',
+            'so_luong_mat_hang_1': 'Số lượng mặt hàng 1',
+            'ten_mat_hang_2': 'Tên mặt hàng 2',
+            'so_luong_mat_hang_2': 'Số lượng mặt hàng 2',
+            'qua_tang': 'Quà tặng',
+            'so_luong_qua_kem': 'Số lượng quà kèm',
+            'gia_ban': 'Giá bán',
+            'loai_tien_thanh_toan': 'Loại tiền thanh toán',
+            'tong_tien_vnd': 'Tổng tiền VNĐ',
+            'hinh_thuc_thanh_toan': 'Hình thức thanh toán',
+            'ghi_chu': 'Ghi chú',
+            'ngay_dong_hang': 'Ngày đóng hàng',
+            'trang_thai_giao_hang': 'Trạng thái giao hàng',
+            'thoi_gian_giao_du_kien': 'Thời gian giao dự kiến',
+            'phi_ship_noi_dia_my': 'Phí ship nội địa Mỹ (usd)',
+            'phi_xu_ly_don': 'Phí xử lý đơn đóng hàng-Lưu kho(usd)',
+            'ghi_chu_chung': 'GHI CHÚ',
             'nhan_vien_sale': 'Nhân viên Sale',
-            'ghi_chu': 'Ghi chú'
-            // Add more mappings as needed
+            'nv_van_don': 'NV Vận đơn',
+            'don_vi_van_chuyen': 'Đơn vị vận chuyển',
+            'so_tien_ve_tk': 'Số tiền của đơn hàng đã về TK Cty',
+            'ke_toan_xac_nhan': 'Kế toán xác nhận thu tiền về',
+            'ngay_doi_soat': 'Ngày Kế toán đối soát với FFM lần 2'
         };
 
         // Convert to Sheet format
