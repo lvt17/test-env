@@ -52,6 +52,57 @@ class UpdateQueueService {
     enqueue(maDonHang, updates, source = 'web') {
         const timestamp = Date.now();
 
+        // 🔄 CRITICAL: Convert Vietnamese field names to snake_case for DB
+        // This mapping is the REVERSE of dbToSheetMapping in syncToSheet
+        const sheetToDbMapping = {
+            'Mã đơn hàng': 'ma_don_hang',
+            'Kết quả Check': 'ket_qua_check',
+            'Trạng thái giao hàng NB': 'trang_thai_giao_hang_nb',
+            'Mã Tracking': 'ma_tracking',
+            'Lý do': 'ly_do',
+            'Trạng thái thu tiền': 'trang_thai_thu_tien',
+            'Ghi chú của VĐ': 'ghi_chu_vd',
+            'Ngày lên đơn': 'ngay_len_don',
+            'Name*': 'name',
+            'Phone*': 'phone',
+            'Add': 'address',
+            'City': 'city',
+            'State': 'state',
+            'khu vực': 'khu_vuc',
+            'Zipcode': 'zipcode',
+            'Mặt hàng': 'mat_hang',
+            'Tên mặt hàng 1': 'ten_mat_hang_1',
+            'Số lượng mặt hàng 1': 'so_luong_mat_hang_1',
+            'Tên mặt hàng 2': 'ten_mat_hang_2',
+            'Số lượng mặt hàng 2': 'so_luong_mat_hang_2',
+            'Quà tặng': 'qua_tang',
+            'Số lượng quà kèm': 'so_luong_qua_kem',
+            'Giá bán': 'gia_ban',
+            'Loại tiền thanh toán': 'loai_tien_thanh_toan',
+            'Tổng tiền VNĐ': 'tong_tien_vnd',
+            'Hình thức thanh toán': 'hinh_thuc_thanh_toan',
+            'Ghi chú': 'ghi_chu',
+            'Ngày đóng hàng': 'ngay_dong_hang',
+            'Trạng thái giao hàng': 'trang_thai_giao_hang',
+            'Thời gian giao dự kiến': 'thoi_gian_giao_du_kien',
+            'Phí ship nội địa Mỹ (usd)': 'phi_ship_noi_dia_my',
+            'Phí xử lý đơn đóng hàng-Lưu kho(usd)': 'phi_xu_ly_don',
+            'GHI CHÚ': 'ghi_chu_chung',
+            'Nhân viên Sale': 'nhan_vien_sale',
+            'NV Vận đơn': 'nv_van_don',
+            'Đơn vị vận chuyển': 'don_vi_van_chuyen',
+            'Số tiền của đơn hàng đã về TK Cty': 'so_tien_ve_tk',
+            'Kế toán xác nhận thu tiền về': 'ke_toan_xac_nhan',
+            'Ngày Kế toán đối soát với FFM lần 2': 'ngay_doi_soat'
+        };
+
+        // Convert Vietnamese keys to snake_case
+        const convertedUpdates = {};
+        for (const [key, value] of Object.entries(updates)) {
+            const dbKey = sheetToDbMapping[key] || key; // Use mapping or keep original
+            convertedUpdates[dbKey] = value;
+        }
+
         // 🛡️ 1. Loop Protection: Ignore echoes from Sheet if we just synced TO it
         if (source === 'sheet') {
             const lockExpiry = this.syncLocks.get(maDonHang);
@@ -82,16 +133,16 @@ class UpdateQueueService {
             console.log(`⚠️ Conflict resolved: ${maDonHang}, winner: ${source} (newer)`);
         }
 
-        // Add to queue
+        // Add to queue with CONVERTED field names (snake_case for DB)
         this.queue.set(maDonHang, {
             ma_don_hang: maDonHang,
-            ...updates,
+            ...convertedUpdates,
             _source: source,
             _timestamp: timestamp,
             _queuedAt: new Date().toISOString()
         });
 
-        console.log(`📥 Queued: ${maDonHang} from ${source}`);
+        console.log(`📥 Queued: ${maDonHang} from ${source} with fields:`, Object.keys(convertedUpdates));
 
         return {
             queued: true,
