@@ -21,7 +21,7 @@ const WATCHED_SHEETS = ['F3'];
 
 /**
  * Trigger khi có thay đổi trong Sheet
- * Được gọi tự động bởi Google Apps Script trigger
+ * OPTIMIZED: Only send the changed field, not full row
  */
 function onEdit(e) {
     try {
@@ -44,24 +44,10 @@ function onEdit(e) {
         const primaryKey = sheet.getRange(row, 1).getValue();
         if (!primaryKey) return; // Skip if no primary key
 
-        // Lấy tên cột (header)
+        // Lấy tên cột (header) - CHỈ ĐỌC 1 CELL
         const headerRow = sheet.getRange(1, column).getValue();
 
-        // Lấy tất cả headers
-        const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-
-        // Lấy toàn bộ row data
-        const rowData = sheet.getRange(row, 1, 1, sheet.getLastColumn()).getValues()[0];
-
-        // Tạo object với full row data
-        const fullRowData = {};
-        for (let i = 0; i < headers.length; i++) {
-            if (headers[i] && rowData[i] !== undefined && rowData[i] !== '') {
-                fullRowData[headers[i]] = rowData[i];
-            }
-        }
-
-        // Chuẩn bị payload với full row data
+        // OPTIMIZED: Chỉ gửi field vừa thay đổi, KHÔNG đọc full row
         const payload = {
             sheetName: sheetName,
             range: range.getA1Notation(),
@@ -73,10 +59,10 @@ function onEdit(e) {
             timestamp: new Date().toISOString(),
             primaryKey: primaryKey,
             changedFields: {
-                [headerRow]: e.value
+                [headerRow]: e.value  // Chỉ 1 field thay vì 40
             },
-            fullRowData: fullRowData,  // Gửi toàn bộ row data cho upsert
-            isNewRow: e.oldValue === undefined  // Đánh dấu row mới
+            // fullRowData: REMOVED for performance
+            isNewRow: e.oldValue === undefined
         };
 
         // Gửi webhook
