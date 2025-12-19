@@ -250,9 +250,10 @@ class SyncController {
                 timestamp: now
             });
 
-            // Edge caching headers for Vercel CDN
+            // DISABLE Edge caching to prevent stale data issues after updates
+            // Use no-cache to always revalidate with origin
             res.set('X-Cache', 'MISS');
-            res.set('Cache-Control', 'public, s-maxage=30, stale-while-revalidate=60');
+            res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
 
             res.json(responseData);
         } catch (error) {

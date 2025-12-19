@@ -3280,7 +3280,11 @@
         // Fetch from DB - add timestamp if forceRefresh to bypass Edge cache
         const url = `${DB_DATA_URL}?page=${page}&limit=${pageSize}&sortBy=id&order=asc${forceRefresh ? '&_t=' + Date.now() : ''}`;
 
-        const response = await fetch(url);
+        // CRITICAL: Use no-store to bypass ALL caching when forceRefresh
+        const fetchOptions = forceRefresh
+          ? { cache: 'no-store', headers: { 'Cache-Control': 'no-cache' } }
+          : {};
+        const response = await fetch(url, fetchOptions);
         const json = await response.json();
 
         if (!json.success) {
