@@ -100,14 +100,52 @@ class WebhookController {
                 try {
                     await databaseService.connect();
 
+                    // Numeric columns that need sanitization
+                    const numericColumns = [
+                        'gia_ban', 'tong_tien_vnd', 'so_luong_mat_hang_1', 'so_luong_mat_hang_2',
+                        'so_luong_qua_kem', 'so_tien_thuc_thu', 'phi_ship_noi_dia_my',
+                        'phi_xu_ly_don', 'so_tien_ve_tk'
+                    ];
+
+                    // Date columns
+                    const dateColumns = [
+                        'ngay_len_don', 'ngay_hen_day_don', 'ngay_dong_hang',
+                        'thoi_gian_giao_du_kien', 'ngay_doi_soat'
+                    ];
+
                     const dbUpdate = { ma_don_hang: primaryKey.normalize('NFC') };
                     for (const [sheetCol, value] of Object.entries(dataSource)) {
                         // Normalize column name for lookup
                         const normalizedCol = sheetCol.normalize('NFC');
                         const dbCol = sheetToDbMapping[normalizedCol];
                         if (dbCol && value !== undefined && value !== '') {
+                            let sanitizedValue = value;
+
+                            // Sanitize numeric columns - convert non-numeric to null
+                            if (numericColumns.includes(dbCol)) {
+                                const num = parseFloat(String(value).replace(/[^0-9.-]/g, ''));
+                                sanitizedValue = isNaN(num) ? null : num;
+                            }
+                            // Handle date columns - convert to ISO string if Date object
+                            else if (dateColumns.includes(dbCol)) {
+                                if (value instanceof Date) {
+                                    sanitizedValue = value.toISOString().split('T')[0];
+                                } else if (typeof value === 'string' && value.trim() !== '') {
+                                    // Try to parse date string
+                                    const d = new Date(value);
+                                    sanitizedValue = isNaN(d.getTime()) ? null : d.toISOString().split('T')[0];
+                                } else {
+                                    sanitizedValue = null;
+                                }
+                            }
                             // Apply lowercase normalization for status columns
-                            dbUpdate[dbCol] = normalizeValue(value, dbCol);
+                            else {
+                                sanitizedValue = normalizeValue(value, dbCol);
+                            }
+
+                            if (sanitizedValue !== null) {
+                                dbUpdate[dbCol] = sanitizedValue;
+                            }
                         }
                     }
 
@@ -115,7 +153,7 @@ class WebhookController {
                     await databaseService.upsertOrder(dbUpdate, { source: 'sheet' });
                     dbUpdated = true;
                     const isNewRow = req.body.isNewRow ? '(NEW)' : '(UPDATE)';
-                    console.log(`✅ DB ${isNewRow} for ${primaryKey}:`, Object.keys(dataSource).length, 'fields');
+                    console.log(`✅ DB ${isNewRow} for ${primaryKey}:`, Object.keys(dbUpdate).length - 1, 'fields');
                 } catch (dbErr) {
                     console.error(`❌ DB update failed:`, dbErr.message);
                 }
