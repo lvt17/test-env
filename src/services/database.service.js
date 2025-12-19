@@ -143,25 +143,32 @@ class DatabaseService {
             .map(col => `${col} = EXCLUDED.${col}`)
             .join(', ');
 
-        // Logic: Only update if the incoming data is newer (if source is sheet)
-        // For web updates, we ALWAYS allow them (they are the latest intent)
-        const conflictCondition = isFromSheet
-            ? 'WHERE orders.updated_at <= EXCLUDED.updated_at OR EXCLUDED.updated_at IS NULL'
-            : '';
-
-        const query = `
-      INSERT INTO orders (${columns.join(', ')})
-      VALUES (${placeholders})
-      ON CONFLICT (ma_don_hang) 
-      DO UPDATE SET 
-        ${updateClause}, 
-        updated_at = CASE 
-          WHEN EXCLUDED.updated_at IS NOT NULL THEN EXCLUDED.updated_at
-          ELSE NOW()
-        END
-      ${conflictCondition}
-      RETURNING *
-    `;
+        // For web updates: ALWAYS execute (user intent is king)
+        // For sheet updates: Only if timestamp is newer (prevent stale data)
+        let query;
+        if (isFromSheet) {
+            query = `
+        INSERT INTO orders (${columns.join(', ')})
+        VALUES (${placeholders})
+        ON CONFLICT (ma_don_hang) 
+        DO UPDATE SET 
+          ${updateClause}, 
+          updated_at = NOW()
+        WHERE orders.updated_at <= EXCLUDED.updated_at OR EXCLUDED.updated_at IS NULL
+        RETURNING *
+      `;
+        } else {
+            // Web updates: ALWAYS execute, no WHERE clause
+            query = `
+        INSERT INTO orders (${columns.join(', ')})
+        VALUES (${placeholders})
+        ON CONFLICT (ma_don_hang) 
+        DO UPDATE SET 
+          ${updateClause}, 
+          updated_at = NOW()
+        RETURNING *
+      `;
+        }
 
         const result = await this.query(query, values);
         return result.rows[0];
